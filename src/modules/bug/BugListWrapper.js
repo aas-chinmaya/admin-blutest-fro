@@ -420,7 +420,7 @@ export default function BugListWrapper() {
 </span>
                       </TableCell>
                       <TableCell>
-                        <button className='cursor-pointer' onClick={() => router.push(`/bug/projectId/?projectId=${project.projectId}`)}>
+                        <button className='cursor-pointer' onClick={() => router.push(`/workspace/issues/projectId/?projectId=${project.projectId}`)}>
 
                             <Eye className="h-4 w-4 text-blue-600" />
                         </button>

@@ -85,7 +85,7 @@ const statusConfig = {
   },
 };
 
-export default function ProjectList({
+export default function MyProjectList({
   mode = 'all',
   employeeId,
   canCreate = false,
@@ -175,8 +175,8 @@ export default function ProjectList({
     }
   };
 
-  const handleView = (id) => router.push(`/workspace/projects/${id}`);
-  const handleCreate = () => router.push('/workspace/projects/onboarding');
+  const handleView = (id) => router.push(`/myworkspace/projects/${id}`);
+  const handleCreate = () => router.push('/myworkspace/projects/onboarding');
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -546,12 +546,3 @@ export default function ProjectList({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

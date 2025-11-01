@@ -1,17 +1,27 @@
 import { configureStore } from '@reduxjs/toolkit'
+
+//1.basic/commom slice
+import sidebarReducer from '@/features/shared/sidebarSlice';
+
+import profileReducer from "@/features/shared/profileSlice"
 import authReducer from '@/features/shared/authSlice';
 import notificationReducer from '@/features/shared/notificationSlice';
 import userReducer from '@/features/shared/userSlice';
-import sidebarReducer from '@/features/shared/sidebarSlice';
 
-
-import teamMembersReducer from '@/features/teamMembersSlice';
-import viewTeamByProjectIdReducer from '@/features/viewTeamByProjectIdSlice';
-//dashbaord & reports
+//2.dashbaord/overview
 import dashboardReducer from '@/features/dashboard/dashboardSlice';
-import dashReducer from '@/features/dashboard/dashSlice';
 
+//3.marketing
+import contactReducer from '@/features/marketing/contactSlice';
 
+//4.sales
+import quotationReducer from '@/features/sales/quotationSlice';
+import quotationRequestsReducer from '@/features/sales/quotationRequestSlice';
+import meetReducer from '@/features/meet/meetSlice';
+
+//5.client
+
+//6.project management
 import projectReducer from '@/features/projectSlice';
 import teamReducer from '@/features/teamSlice';
 import taskReducer from '@/features/taskSlice';
@@ -20,16 +30,19 @@ import subTaskReducer from '@/features/subTaskSlice';
 import bugReducer from '@/features/bugSlice';
 import documentReducer from '@/features/documentSlice';
 
+import teamMembersReducer from '@/features/teamMembersSlice';
+import viewTeamByProjectIdReducer from '@/features/viewTeamByProjectIdSlice';
+
+
+
+
 // module reducer
-import contactReducer from '@/features/contactSlice';
 import meetingReducer from '@/features/meetingSlice';
 import teammeetingMomReducer from '@/features/calender/teammeetingMomSlice';
 import meetingCalendarReducer from '@/features/calender/meetingCalendarSlice';
 import teamMeetingsReducer from '@/features/calender/teammeetingCalenderSlice';
 import momReducer from '@/features/momSlice';
-import quotationReducer from '@/features/quotationSlice';
 import clientReducer from '@/features/clientSlice';
-import paymentReducer from '@/features/meeting/paymentSlice'
 import causeReducer from '@/features/causeSlice';
 import projectAnalyticsReducer from "@/features/projectAnalyticsSlice";
 
@@ -41,14 +54,9 @@ import industriesReducer from '@/features/master/industriesMasterSlice';
 
 
 
-//meetings
-
-import projectTeamMeetingReducer from "@/features/projectteammeetingSlice"
-import projectMeetingsReducer from "@/features/projetMeetingSlice"
 
 
-import projectMeetReducer from "@/features/projectmeetSlice"
-import profileReducer from "@/features/shared/profileSlice"
+
 
 
 import projectMeetingMomReducer from '@/features/projectmeetingmomSlice'; // Adjust path as needed
@@ -79,17 +87,20 @@ export const store = configureStore({
   notifications: notificationReducer,
   user: userReducer,
 
+
     //dashboard
-  dash: dashReducer,
+
   dashboard:dashboardReducer,
   projectAnalytics: projectAnalyticsReducer,
-
+meet:meetReducer,
   // module reducer
  contact: contactReducer,
   meetings: meetingReducer,
   meetingCalendar: meetingCalendarReducer,
   mom: momReducer,
+  //sales
   quotation : quotationReducer,
+  quotationRequests:quotationRequestsReducer,
   client:clientReducer,
   project:projectReducer,
   task:taskReducer,
@@ -97,8 +108,8 @@ export const store = configureStore({
   team: teamReducer,
   bugs: bugReducer,
   cause: causeReducer,
+ 
 
-  payment: paymentReducer,
   documents: documentReducer,
   profile: profileReducer,
 
@@ -107,20 +118,17 @@ export const store = configureStore({
   services: serviceReducer,
   industries:industriesReducer,
 
-
   teamMeetings:teamMeetingsReducer,
 teammeetingMom:teammeetingMomReducer,
     teamMembers: teamMembersReducer,
   projectTeam: viewTeamByProjectIdReducer,
 
-  projectTeamMeeting: projectTeamMeetingReducer,
-  projectMeetings:projectMeetingsReducer,
-
+  
 
 
 
   //project meeting
-  projectMeet:projectMeetReducer,
+ 
      projectMeetingMom: projectMeetingMomReducer,
   
 

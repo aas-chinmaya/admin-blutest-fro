@@ -5,7 +5,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import CreateQuotationForm from "@/modules/quotation/CreateQuotationForm";
+import CreateQuotationForm from "@/modules/sales/CreateQuotationForm";
 
 // Component to handle search params within Suspense
 function CreateQuotationContent() {

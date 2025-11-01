@@ -51,52 +51,90 @@ export const fullNav = [
     icon: "Inbox",
     roles: ["cpcGroup", "employeeGroup"],
   },
-
-  {
-   title: "Project Management",
-   url: "#",
-   icon: "CalendarDays",
-   roles: ["cpcGroup","employeeGroup"],
-   items: [
-     { title: "All Project", url: "/project", roles: ["cpcGroup","employeeGroup"] },
-     { title: "Active Team", url: "/team", roles: ["cpcGroup","employeeGroup"] },
-     { title: "All Task", url: "/task", roles: ["cpcGroup","employeeGroup"] },
-     { title: "All Issues", url: "/bug", roles: ["cpcGroup"] },
-     { title: "Assinged Issues", url: "/bug/assigned-bugs", roles: ["employeeGroup"] },
-   ],
- },
    {
-    title: "Contact",
-    url: "/contact",
-    icon: "PhoneCall",
-    roles: ["cpcGroup"],
+    title: "Calendar",
+    url: "/calendar",
+    icon: "Inbox",
+    roles: ["cpcGroup", "employeeGroup"],
   },
-   {
-    title: "Client",
-    url: "/client",
-    icon: "User",
-    roles: ["cpcGroup"],
-  },
- 
-
+  
+  
   {
-    title: "Quotation",
-    url: "/quotation",
-    icon: "FileText",
-    roles: ["cpcGroup"],
-  },
-  {
-    title: "Meeting",
+    title: "My WorkSpace",
     url: "#",
     icon: "CalendarDays",
-    roles: ["cpcGroup"],
+    roles: ["employeeGroup"],
     items: [
-      { title: "Client Meeting", url: "/meetings/all", roles: ["cpcGroup"] },
-      { title: "Meeting Calendar", url: "/meetings/calendar", roles: ["cpcGroup"] },
-      // { title: "MOM Dashboard", url: "/meetings/mom", roles: ["cpcGroup"] },
-      
+      { title: "My Project", url: "/myworkspace/projects", roles: ["employeeGroup"] },
+      { title: "My Team", url: "/myworkspace/teams", roles: ["employeeGroup"] },
+      { title: "My Task", url: "/myworkspace/tasks", roles: ["employeeGroup"] },
+      { title: "My Issues", url: "/myworkspace/issues", roles: ["employeeGroup"] },
     ],
   },
+  {
+    title: "Work Space",
+   url: "#",
+   icon: "CalendarDays",
+   roles: ["cpcGroup"],
+   items: [
+     { title: "All Project", url: "/workspace/projects", roles: ["cpcGroup"] },
+     { title: "All Team", url: "/workspace/teams", roles: ["cpcGroup"] },
+     { title: "All Task", url: "/workspace/tasks", roles: ["cpcGroup"] },
+     { title: "All Issues", url: "/workspace/issues", roles: ["cpcGroup"] },
+    ],
+  },
+  {
+   title: "Marketing",
+   url: "#",
+   icon: "Inbox",
+   roles: ["cpcGroup"],
+   items: [
+     { title: "Overview", url: "/marketing", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "Received Contacts", url: "/marketing/contacts", roles: ["cpcGroup", "employeeGroup"] },
+   ],
+ },
+  {
+   title: "Sales",
+   url: "#",
+   icon: "Inbox",
+   roles: ["cpcGroup"],
+   items: [
+     { title: "Quotation Requests", url: "/sales/quotation-requests", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "Approved Quotations", url: "/sales/approved", roles: ["cpcGroup", "employeeGroup"] },
+   ],
+ },
+  //  {
+  //   title: "Contact",
+  //   url: "/contact",
+  //   icon: "PhoneCall",
+  //   roles: ["cpcGroup"],
+  // },
+  //  {
+  //   title: "Client",
+  //   url: "/client",
+  //   icon: "User",
+  //   roles: ["cpcGroup"],
+  // },
+ 
+
+  // {
+  //   title: "Quotation",
+  //   url: "/quotation",
+  //   icon: "FileText",
+  //   roles: ["cpcGroup"],
+  // },
+  // {
+  //   title: "Meeting",
+  //   url: "#",
+  //   icon: "CalendarDays",
+  //   roles: ["cpcGroup"],
+  //   items: [
+  //     { title: "Client Meeting", url: "/meetings/all", roles: ["cpcGroup"] },
+  //     { title: "Meeting Calendar", url: "/meetings/calendar", roles: ["cpcGroup"] },
+  //     // { title: "MOM Dashboard", url: "/meetings/mom", roles: ["cpcGroup"] },
+      
+  //   ],
+  // },
   
 
   {

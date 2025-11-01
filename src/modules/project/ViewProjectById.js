@@ -85,12 +85,14 @@ export default function ViewProjectById({ projectId }) {
   const initialTab = searchParams.get("tab") || "details";
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  useEffect(() => {
-    if (activeTab !== initialTab) {
-      router.replace(`/project/${projectId}?tab=${activeTab}`);
-    }
-  }, [activeTab, projectId, router, initialTab]);
 
+useEffect(() => {
+  if (activeTab !== initialTab) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', activeTab);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
+}, [activeTab]);
   const dispatch = useDispatch();
   const { project, status, error, successMessage } = useSelector((state) => state.project);
   const { currentUser, isTeamLead } = useCurrentUser(project?.data?.teamLeadId);
@@ -256,7 +258,7 @@ export default function ViewProjectById({ projectId }) {
                       currentUser?.position === "Team Lead") && (
                       <Button
                         size="sm"
-                        onClick={() => router.push(`/project/edit/${projectId}`)}
+                        onClick={() => router.push(`/workspace/projects/edit/${projectId}`)}
                         className="bg-blue-600 text-white hover:bg-blue-700"
                         aria-label="Edit project"
                       >
