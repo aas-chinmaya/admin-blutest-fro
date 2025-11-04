@@ -1,8 +1,6 @@
 
 
 
-
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -17,9 +15,8 @@ import {
   FiFileText,
   FiUpload,
   FiX,
-  FiFolder,
-  FiFile,
-  FiArrowLeft,
+  FiEye,
+  FiCheck,
 } from "react-icons/fi";
 import {
   createProject,
@@ -37,12 +34,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 export default function ProjectOnboarding() {
@@ -58,6 +50,7 @@ export default function ProjectOnboarding() {
   const fileInputRef = useRef(null);
   const clientSelectRef = useRef(null);
   const teamLeadSelectRef = useRef(null);
+
   const [formData, setFormData] = useState({
     projectName: "",
     description: "",
@@ -69,6 +62,7 @@ export default function ProjectOnboarding() {
     category: "",
     attachments: [],
   });
+
   const [formErrors, setFormErrors] = useState({
     projectName: "",
     description: "",
@@ -78,7 +72,10 @@ export default function ProjectOnboarding() {
     expectedEndDate: "",
     category: "",
   });
+
   const [fileErrors, setFileErrors] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [previewFile, setPreviewFile] = useState(null);
   const [isClientSelectOpen, setIsClientSelectOpen] = useState(false);
   const [isTeamLeadSelectOpen, setIsTeamLeadSelectOpen] = useState(false);
   const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
@@ -86,44 +83,37 @@ export default function ProjectOnboarding() {
   const [dragActive, setDragActive] = useState(false);
   const [hasHandledSuccess, setHasHandledSuccess] = useState(false);
 
-  // Handle success and error navigation
+  // Success navigation
   useEffect(() => {
     if (successMessage && !hasHandledSuccess) {
       setHasHandledSuccess(true);
+      toast.success("Project created successfully!");
       dispatch(fetchAllProjects());
-      router.push("/project");
+      router.push("/project/all");
       dispatch(resetProjectCreation());
     }
     if (error) {
+      toast.error(error || "Failed to create project");
       dispatch(resetProjectCreation());
     }
   }, [successMessage, error, router, dispatch, hasHandledSuccess]);
 
-  // Click outside handler for select dropdowns and date pickers
+  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        clientSelectRef.current &&
-        !clientSelectRef.current.contains(event.target)
-      ) {
+      if (clientSelectRef.current && !clientSelectRef.current.contains(event.target)) {
         setIsClientSelectOpen(false);
       }
-      if (
-        teamLeadSelectRef.current &&
-        !teamLeadSelectRef.current.contains(event.target)
-      ) {
+      if (teamLeadSelectRef.current && !teamLeadSelectRef.current.contains(event.target)) {
         setIsTeamLeadSelectOpen(false);
       }
-      if (
-        formRef.current &&
-        !formRef.current.contains(event.target)
-      ) {
+      if (formRef.current && !formRef.current.contains(event.target)) {
         setIsStartDatePickerOpen(false);
         setIsExpectedEndDatePickerOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside); // Add touch support
+    document.addEventListener("touchstart", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
@@ -135,82 +125,57 @@ export default function ProjectOnboarding() {
     const validation = validateInput(value);
 
     if (!validation.isValid) {
-      setFormErrors((prev) => ({
-        ...prev,
-        [name]: validation.warning,
-      }));
+      setFormErrors((prev) => ({ ...prev, [name]: validation.warning }));
       return;
     }
 
-    setFormErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
+    setFormErrors((prev) => ({ ...prev, [name]: "" }));
 
     const sanitizedValue = sanitizeInput(value);
-    const updatedFormData = {
-      ...formData,
-      [name]: sanitizedValue,
-    };
+    const updatedFormData = { ...formData, [name]: sanitizedValue };
 
     if (name === "category" && sanitizedValue === "in house") {
       updatedFormData.clientId = undefined;
-      setFormErrors((prev) => ({
-        ...prev,
-        clientId: "",
-      }));
+      setFormErrors((prev) => ({ ...prev, clientId: "" }));
     }
 
-    if (
-      name === "startDate" &&
-      updatedFormData.expectedEndDate &&
-      new Date(sanitizedValue) > new Date(updatedFormData.expectedEndDate)
-    ) {
-      setFormErrors((prev) => ({
-        ...prev,
-        startDate: "Start date cannot be after expected end date",
-      }));
-    } else if (
-      name === "expectedEndDate" &&
-      updatedFormData.startDate &&
-      new Date(updatedFormData.startDate) > new Date(sanitizedValue)
-    ) {
-      setFormErrors((prev) => ({
-        ...prev,
-        expectedEndDate: "Expected end date cannot be before start date",
-      }));
+    if (name === "startDate" && updatedFormData.expectedEndDate) {
+      if (new Date(sanitizedValue) > new Date(updatedFormData.expectedEndDate)) {
+        setFormErrors((prev) => ({ ...prev, startDate: "Start date cannot be after end date" }));
+      } else {
+        setFormErrors((prev) => ({ ...prev, startDate: "", expectedEndDate: "" }));
+      }
+    }
+
+    if (name === "expectedEndDate" && updatedFormData.startDate) {
+      if (new Date(updatedFormData.startDate) > new Date(sanitizedValue)) {
+        setFormErrors((prev) => ({ ...prev, expectedEndDate: "End date cannot be before start date" }));
+      } else {
+        setFormErrors((prev) => ({ ...prev, expectedEndDate: "", startDate: "" }));
+      }
     }
 
     setFormData(updatedFormData);
   };
 
   const handleDateSelect = (name, date) => {
-    const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    handleChange({ target: { name, value: formattedDate } });
-    if (name === "startDate") {
-      setIsStartDatePickerOpen(false);
-    } else if (name === "expectedEndDate") {
-      setIsExpectedEndDatePickerOpen(false);
-    }
+    const formatted = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    handleChange({ target: { name, value: formatted } });
+    if (name === "startDate") setIsStartDatePickerOpen(false);
+    if (name === "expectedEndDate") setIsExpectedEndDatePickerOpen(false);
   };
 
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    setDragActive(e.type === "dragenter" || e.type === "dragover");
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files);
-    }
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
   };
 
   const handleFiles = (files) => {
@@ -226,637 +191,494 @@ export default function ProjectOnboarding() {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.ms-powerpoint",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "text/plain",
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "video/mp4",
-      "video/mov",
-      "video/avi",
-      "audio/mpeg",
-      "audio/wav",
     ];
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
 
-    newFiles.forEach((file) => {
+    newFiles.forEach((file, index) => {
       if (!allowedTypes.includes(file.type)) {
-        errors.push(`File ${file.name} has an unsupported type.`);
+        errors.push(`${file.name}: Only PDF, Word, Excel, PPT allowed`);
       } else if (file.size > maxSize) {
-        errors.push(`File ${file.name} exceeds 10MB.`);
+        errors.push(`${file.name}: Max 10MB`);
       } else {
         validFiles.push(file);
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+        simulateUpload(file.name);
       }
     });
 
-    if (errors.length > 0) {
+    if (errors.length) {
       setFileErrors(errors);
+      toast.error("Some files were rejected");
     }
 
-    if (validFiles.length > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        attachments: [...prev.attachments, ...validFiles],
-      }));
+    if (validFiles.length) {
+      setFormData((prev) => ({ ...prev, attachments: [...prev.attachments, ...validFiles] }));
       setFileErrors([]);
+      toast.success(`${validFiles.length} file(s) added`);
     }
   };
 
+  const simulateUpload = (fileName) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 20;
+      setUploadProgress((prev) => ({ ...prev, [fileName]: progress }));
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setUploadProgress((prev) => {
+            const { [fileName]: _, ...rest } = prev;
+            return rest;
+          });
+        }, 800);
+      }
+    }, 200);
+  };
+
   const removeFile = (index) => {
+    const file = formData.attachments[index];
     setFormData((prev) => ({
       ...prev,
       attachments: prev.attachments.filter((_, i) => i !== index),
     }));
+    setUploadProgress((prev) => {
+      const { [file.name]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const viewFile = (file) => {
+    const url = URL.createObjectURL(file);
+    setPreviewFile({ url, name: file.name, type: file.type });
+  };
+
+  const closePreview = () => {
+    if (previewFile?.url) URL.revokeObjectURL(previewFile.url);
+    setPreviewFile(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     let hasErrors = false;
     const newErrors = { ...formErrors };
 
-    for (const [key, value] of Object.entries(formData)) {
-      if (key === "attachments" || key === "teamLeadName") continue;
-      if (key === "clientId" && formData.category === "in house") continue;
-      const validation = validateInput(value);
-      if (!validation.isValid) {
-        newErrors[key] = validation.warning;
+    const required = ["projectName", "description", "teamLeadId", "startDate", "expectedEndDate", "category"];
+    required.forEach((key) => {
+      if (!formData[key]) {
+        newErrors[key] = "This field is required";
         hasErrors = true;
       }
-    }
+    });
 
-    if (formData.startDate && formData.expectedEndDate) {
-      if (new Date(formData.startDate) > new Date(formData.expectedEndDate)) {
-        newErrors.startDate = "Start date cannot be after expected end date";
-        newErrors.expectedEndDate = "Expected end date cannot be before start date";
-        hasErrors = true;
-      }
+    if (formData.category === "client" && !formData.clientId) {
+      newErrors.clientId = "Client is required";
+      hasErrors = true;
     }
 
     if (hasErrors) {
       setFormErrors(newErrors);
+      toast.error("Please fill all required fields");
       return;
     }
 
     const submissionData = new FormData();
     submissionData.append("projectName", formData.projectName);
     submissionData.append("description", formData.description);
-    if (formData.category === "client") {
-      submissionData.append("clientId", formData.clientId);
-    }
+    if (formData.category === "client") submissionData.append("clientId", formData.clientId);
     submissionData.append("teamLeadId", formData.teamLeadId);
     submissionData.append("teamLeadName", formData.teamLeadName);
     submissionData.append("startDate", formData.startDate);
     submissionData.append("expectedEndDate", formData.expectedEndDate);
     submissionData.append("category", formData.category);
-
-    formData.attachments.forEach((file) => {
-      submissionData.append("attachments", file);
-    });
+    formData.attachments.forEach((file) => submissionData.append("attachments", file));
 
     try {
       await dispatch(createProject(submissionData)).unwrap();
-      toast.success("Project created successfully!");
     } catch (err) {
-      // console.error("Project creation error:", err);
-      toast.error("Error while creating Project!");
+      // Error handled in useEffect
     }
   };
 
-  const getFileIcon = (file) => {
-    const fileName = file.name || "unknown";
-    const extension = fileName.split(".").pop().toLowerCase();
-    return <FiFile className="text-gray-800" aria-hidden="true" />;
+  const getFileIcon = (type) => {
+    if (type.includes("pdf")) return <FiFileText className="w-5 h-5 text-red-600" />;
+    if (type.includes("word")) return <FiFileText className="w-5 h-5 text-blue-600" />;
+    if (type.includes("excel")) return <FiFileText className="w-5 h-5 text-green-600" />;
+    if (type.includes("powerpoint")) return <FiFileText className="w-5 h-5 text-orange-600" />;
+    return <FiFileText className="w-5 h-5 text-gray-600" />;
   };
 
-  // Responsive Calendar Picker
+  const isFormValid = () => {
+    const required = ["projectName", "description", "teamLeadId", "startDate", "expectedEndDate", "category"];
+    const allFilled = required.every((key) => formData[key]);
+    const clientValid = formData.category !== "client" || formData.clientId;
+    return allFilled && clientValid && !loading;
+  };
+
   const CalendarPicker = ({ value, onSelect, name }) => {
-    const currentDate = value ? new Date(value) : new Date();
-    const [currentMonth, setCurrentMonth] = useState(currentDate.getMonth());
-    const [currentYear, setCurrentYear] = useState(currentDate.getFullYear());
+    const [year, setYear] = useState(new Date().getFullYear());
+    const [month, setMonth] = useState(new Date().getMonth());
 
-    let selectedYear, selectedMonth, selectedDay;
-    if (value) {
-      const parts = value.split('-');
-      selectedYear = parseInt(parts[0]);
-      selectedMonth = parseInt(parts[1]) - 1;
-      selectedDay = parseInt(parts[2]);
-    }
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    const selected = value ? new Date(value) : null;
 
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-    const weeks = [];
-    let week = Array(7).fill(null);
-
-    for (let i = 0; i < firstDayOfMonth; i++) {
-      week[i] = null;
-    }
-    days.forEach((day, index) => {
-      const weekIndex = (index + firstDayOfMonth) % 7;
-      week[weekIndex] = day;
-      if (weekIndex === 6 || index === days.length - 1) {
-        weeks.push([...week]);
-        week = Array(7).fill(null);
-      }
-    });
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     return (
-      <div className="absolute z-10 bg-white border border-gray-200 rounded-md shadow-lg p-2 sm:p-4 mt-2 w-full max-w-[90vw] sm:max-w-xs max-h-[60vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-2">
+      <div className="absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4 mt-2 w-72">
+        <div className="flex justify-between items-center mb-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (currentMonth === 0) {
-                setCurrentMonth(11);
-                setCurrentYear(currentYear - 1);
-              } else {
-                setCurrentMonth(currentMonth - 1);
-              }
+              if (month === 0) { setMonth(11); setYear(year - 1); }
+              else setMonth(month - 1);
             }}
-            className="text-xs sm:text-sm"
-          >
-            Prev
-          </Button>
-          <span className="font-semibold text-xs sm:text-sm">
-            {new Date(currentYear, currentMonth).toLocaleString("default", {
-              month: "long",
-              year: "numeric",
-            })}
+          >‹</Button>
+          <span className="font-medium text-sm">
+            {new Date(year, month).toLocaleString("default", { month: "long", year: "numeric" })}
           </span>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (currentMonth === 11) {
-                setCurrentMonth(0);
-                setCurrentYear(currentYear + 1);
-              } else {
-                setCurrentMonth(currentMonth + 1);
-              }
+              if (month === 11) { setMonth(0); setYear(year + 1); }
+              else setMonth(month + 1);
             }}
-            className="text-xs sm:text-sm"
-          >
-            Next
-          </Button>
+          >›</Button>
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div key={day} className="text-[10px] sm:text-xs font-semibold text-gray-600">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs">
+          {weekdays.map((day) => (
+            <div key={day} className="font-semibold text-gray-500 py-2">
               {day}
             </div>
           ))}
-          {weeks.map((week, weekIndex) =>
-            week.map((day, dayIndex) => (
+          {Array.from({ length: firstDay }, (_, i) => (
+            <div key={`empty-start-${i}`} />
+          ))}
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const date = new Date(year, month, day);
+            const isSelected = selected && selected.toDateString() === date.toDateString();
+            const isToday = date.toDateString() === new Date().toDateString();
+            return (
               <Button
-                key={`${weekIndex}-${dayIndex}`}
-                variant="ghost"
-                className={`p-1 h-7 w-7 sm:h-8 sm:w-8 text-[10px] sm:text-sm ${
-                  day && selectedYear === currentYear && selectedMonth === currentMonth && selectedDay === day
-                    ? "bg-[#1447e6] text-white"
-                    : "hover:bg-gray-100"
-                }`}
-                onClick={() =>
-                  day &&
-                  onSelect(name, new Date(currentYear, currentMonth, day))
-                }
-                disabled={!day}
+                key={day}
+                variant={isSelected ? "default" : "ghost"}
+                className={`h-8 w-8 text-xs ${isSelected ? "bg-blue-600 hover:bg-blue-700" : ""} ${isToday ? "ring-2 ring-blue-400" : ""}`}
+                onClick={() => onSelect(name, date)}
               >
-                {day || ""}
+                {day}
               </Button>
-            ))
-          )}
+            );
+          })}
         </div>
       </div>
     );
   };
 
   return (
-    <Card
-      ref={formRef}
-      className="min-h-screen bg-white border border-gray-200 shadow-md w-full max-w-[100vw] mx-auto"
-    >
-      <CardHeader className="px-4 sm:px-6">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="flex items-center gap-2 border-gray-300 text-gray-800 hover:bg-gray-100 rounded-md text-xs sm:text-sm px-3 sm:px-4 py-2"
-            aria-label="Back to projects"
-          >
-            <FiArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-            <span className="hidden sm:inline">Back</span>
-          </Button>
-          <CardTitle className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
-            Onboard New Project
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="px-4 sm:px-6">
-        <form id="project-form" onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-          {/* Responsive Grid: Stack on mobile, side-by-side on larger screens */}
-          <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
-            {/* Left Column: Form Fields */}
-            <div className="flex-1 space-y-4 sm:space-y-6">
-              {/* Project Name */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="projectName"
-                  className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                    formErrors.projectName ? "text-red-500" : "text-gray-800"
-                  }`}
-                >
-                  <FiFileText aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Project Name
-                  {formErrors.projectName && (
-                    <span className="text-[10px] sm:text-xs ml-2">({formErrors.projectName})</span>
-                  )}
-                </Label>
-                <Input
-                  id="projectName"
-                  name="projectName"
-                  value={formData.projectName}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  placeholder="Enter project name"
-                  className={`border-gray-300 focus:ring-[#1447e6] text-gray-800 placeholder:text-gray-400 rounded-md text-sm h-10 sm:h-11 w-full ${
-                    formErrors.projectName ? "border-red-300" : ""
-                  } touch-manipulation`}
-                  aria-label="Project name"
-                />
-              </div>
+    <>
+      <div ref={formRef} className="min-h-screen  p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8 text-center sm:text-left">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+              Onboard New Project
+            </h1>
+            <p className="mt-2 text-lg text-gray-600">Fill in the details to create a professional project</p>
+          </div>
 
-              {/* Category and Client */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1 space-y-2">
-                  <Label
-                    htmlFor="category"
-                    className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                      formErrors.category ? "text-red-500" : "text-gray-800"
-                    }`}
-                  >
-                    <FiFolder aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Project Type
-                    {formErrors.category && (
-                      <span className="text-[10px] sm:text-xs ml-2">({formErrors.category})</span>
-                    )}
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left: Form Fields */}
+              <div className="space-y-6">
+                {/* Project Name */}
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                    Project Name <span className="text-red-500">*</span>
                   </Label>
-                  <Select
-                    name="category"
-                    value={formData.category}
-                    onValueChange={(value) =>
-                      handleChange({ target: { name: "category", value } })
-                    }
-                    disabled={loading}
-                  >
-                    <SelectTrigger
-                      className={`border-gray-300 focus:ring-[#1447e6] text-gray-800 rounded-md text-sm h-10 sm:h-11 w-full ${
-                        formErrors.category ? "border-red-300" : ""
-                      } touch-manipulation`}
-                      aria-label="Project type"
-                    >
-                      <SelectValue placeholder="Select Project Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="client">Client</SelectItem>
-                      <SelectItem value="in house">In House</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    name="projectName"
+                    value={formData.projectName}
+                    onChange={handleChange}
+                    placeholder="e.g., Enterprise CRM System"
+                    className={`h-12 text-base ${formErrors.projectName ? "border-red-500 focus:ring-red-500" : "border-gray-300"}`}
+                  />
+                  {formErrors.projectName && <p className="text-red-500 text-sm">{formErrors.projectName}</p>}
                 </div>
-                <div className="flex-1 space-y-2">
-                  {formData.category === "client" ? (
-                    <div ref={clientSelectRef}>
-                      <Label
-                        htmlFor="clientId"
-                        className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                          formErrors.clientId ? "text-red-500" : "text-gray-800"
-                        }`}
-                      >
-                        <FiUser aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                        Client
-                        {formErrors.clientId && (
-                          <span className="text-[10px] sm:text-xs ml-2">({formErrors.clientId})</span>
-                        )}
+
+                {/* Category & Client */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                      Project Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={formData.category} onValueChange={(v) => handleChange({ target: { name: "category", value: v } })}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">
+                          <span className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                            Client Project
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="in house">
+                          <span className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                            In-House
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.category === "client" && (
+                    <div ref={clientSelectRef} className="space-y-2">
+                      <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                        Client <span className="text-red-500">*</span>
                       </Label>
                       <ClientSelect
                         value={formData.clientId}
                         isOpen={isClientSelectOpen}
                         onToggle={() => setIsClientSelectOpen(!isClientSelectOpen)}
-                        onChange={(value) => {
-                          setFormData((prev) => ({ ...prev, clientId: value }));
-                          setIsClientSelectOpen(false);
-                          setFormErrors((prev) => ({ ...prev, clientId: "" }));
+                        onChange={(v) => {
+                          setFormData(prev => ({ ...prev, clientId: v }));
+                          setFormErrors(prev => ({ ...prev, clientId: "" }));
                         }}
-                        disabled={loading}
-                        className="border-gray-300 focus:ring-[#1447e6] text-gray-800 rounded-md text-sm h-10 sm:h-11 w-full touch-manipulation"
+                        className="h-12"
                       />
+                      {formErrors.clientId && <p className="text-red-500 text-sm">{formErrors.clientId}</p>}
                     </div>
-                  ) : (
-                    <div className="h-10 sm:h-11"></div>
                   )}
                 </div>
-              </div>
 
-              {/* Team Lead */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="teamLeadId"
-                  className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                    formErrors.teamLeadId ? "text-red-500" : "text-gray-800"
-                  }`}
-                >
-                  <FiUser aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Team Lead
-                  {formErrors.teamLeadId && (
-                    <span className="text-[10px] sm:text-xs ml-2">({formErrors.teamLeadId})</span>
-                  )}
-                </Label>
-                <TeamLeadSelect
-                  value={formData.teamLeadId}
-                  isOpen={isTeamLeadSelectOpen}
-                  onToggle={() => setIsTeamLeadSelectOpen(!isTeamLeadSelectOpen)}
-                  onChange={({ teamLeadId, teamLeadName }) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      teamLeadId,
-                      teamLeadName,
-                    }));
-                    setIsTeamLeadSelectOpen(false);
-                    setFormErrors((prev) => ({ ...prev, teamLeadId: "" }));
-                  }}
-                  disabled={loading}
-                  className="border-gray-300 focus:ring-[#1447e6] text-gray-800 rounded-md text-sm h-10 sm:h-11 w-full touch-manipulation"
-                />
-              </div>
-
-              {/* Start Date and Expected End Date */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1 space-y-2 relative">
-                  <Label
-                    htmlFor="startDate"
-                    className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                      formErrors.startDate ? "text-red-500" : "text-gray-800"
-                    }`}
-                  >
-                    <FiCalendar aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Start Date
-                    {formErrors.startDate && (
-                      <span className="text-[10px] sm:text-xs ml-2">({formErrors.startDate})</span>
-                    )}
+                {/* Team Lead */}
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                    Team Lead <span className="text-red-500">*</span>
                   </Label>
-                  <div className="relative">
-                    <Input
-                      id="startDate"
-                      type="text"
-                      name="startDate"
-                      value={formData.startDate}
-                      readOnly
-                      required
-                      disabled={loading}
-                      placeholder="Select start date"
-                      className={`border-gray-300 focus:ring-[#1447e6] text-gray-800 placeholder:text-gray-400 rounded-md text-sm h-10 sm:h-11 w-full pr-10 cursor-pointer ${
-                        formErrors.startDate ? "border-red-300" : ""
-                      } touch-manipulation`}
-                      aria-label="Start date"
-                      onClick={() => setIsStartDatePickerOpen(!isStartDatePickerOpen)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          setIsStartDatePickerOpen(!isStartDatePickerOpen);
-                        }
-                      }}
-                    />
-                    <FiCalendar
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 cursor-pointer h-4 w-4 sm:h-5 sm:w-5"
-                      onClick={() => setIsStartDatePickerOpen(!isStartDatePickerOpen)}
-                    />
-                    {isStartDatePickerOpen && (
-                      <CalendarPicker
-                        value={formData.startDate}
-                        onSelect={handleDateSelect}
-                        name="startDate"
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className={`flex-1 space-y-2 relative ${!formData.startDate ? 'opacity-50 pointer-events-none' : ''}`}>
-                  <Label
-                    htmlFor="expectedEndDate"
-                    className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                      formErrors.expectedEndDate ? "text-red-500" : "text-gray-800"
-                    }`}
-                  >
-                    <FiCalendar aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                    Expected End Date
-                    {formErrors.expectedEndDate && (
-                      <span className="text-[10px] sm:text-xs ml-2">({formErrors.expectedEndDate})</span>
-                    )}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="expectedEndDate"
-                      type="text"
-                      name="expectedEndDate"
-                      value={formData.expectedEndDate}
-                      readOnly
-                      required
-                      disabled={loading || !formData.startDate}
-                      placeholder="Select expected end date"
-                      className={`border-gray-300 focus:ring-[#1447e6] text-gray-800 placeholder:text-gray-400 rounded-md text-sm h-10 sm:h-11 w-full pr-10 cursor-pointer ${
-                        formErrors.expectedEndDate ? "border-red-300" : ""
-                      } touch-manipulation`}
-                      aria-label="Expected end date"
-                      onClick={() => formData.startDate && setIsExpectedEndDatePickerOpen(!isExpectedEndDatePickerOpen)}
-                      onKeyDown={(e) => {
-                        if ((e.key === "Enter" || e.key === " ") && formData.startDate) {
-                          setIsExpectedEndDatePickerOpen(!isExpectedEndDatePickerOpen);
-                        }
-                      }}
-                    />
-                    <FiCalendar
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 cursor-pointer h-4 w-4 sm:h-5 sm:w-5"
-                      onClick={() => formData.startDate && setIsExpectedEndDatePickerOpen(!isExpectedEndDatePickerOpen)}
-                    />
-                    {isExpectedEndDatePickerOpen && (
-                      <CalendarPicker
-                        value={formData.expectedEndDate}
-                        onSelect={handleDateSelect}
-                        name="expectedEndDate"
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: File Upload */}
-            <div className="flex-1 space-y-2 lg:max-w-md">
-              <Label className="font-semibold flex items-center gap-2 text-xs sm:text-sm text-gray-800">
-                <FiUpload aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-                File Upload
-              </Label>
-              <div className="border rounded-md bg-white flex flex-col h-[300px] sm:h-[400px] lg:h-full">
-                {/* Choose Region */}
-                <div
-                  className={`p-4 border-b border-gray-200 transition-colors duration-200 flex flex-col items-center justify-center flex-grow ${
-                    dragActive ? "border-blue-300 bg-gray-50" : "bg-white"
-                  }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => !loading && fileInputRef.current?.click()}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      !loading && fileInputRef.current?.click();
-                    }
-                  }}
-                  aria-label="File upload area"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={(e) => handleFiles(e.target.files)}
-                    className="hidden"
-                    disabled={loading}
-                    accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,image/jpeg,image/png,image/gif,video/mp4,video/mov,video/avi,audio/mpeg,audio/wav"
-                    aria-hidden="true"
+                  <TeamLeadSelect
+                    value={formData.teamLeadId}
+                    isOpen={isTeamLeadSelectOpen}
+                    onToggle={() => setIsTeamLeadSelectOpen(!isTeamLeadSelectOpen)}
+                    onChange={({ teamLeadId, teamLeadName }) => {
+                      setFormData(prev => ({ ...prev, teamLeadId, teamLeadName }));
+                      setFormErrors(prev => ({ ...prev, teamLeadId: "" }));
+                    }}
+                    className="h-12"
                   />
-                  <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                    <FiUpload className="text-xl sm:text-2xl text-gray-800" aria-hidden="true" />
-                    <p className="text-[10px] sm:text-sm text-gray-600 px-2">
-                      Drag & drop files or tap to upload (PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, PNG, GIF, MP4, MOV, AVI, MP3, WAV)
-                    </p>
+                  {formErrors.teamLeadId && <p className="text-red-500 text-sm">{formErrors.teamLeadId}</p>}
+                </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 relative">
+                    <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                      Start Date <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.startDate}
+                        readOnly
+                        placeholder="YYYY-MM-DD"
+                        className={`h-12 pr-10 cursor-pointer ${formErrors.startDate ? "border-red-500 focus:ring-red-500" : ""}`}
+                        onClick={() => setIsStartDatePickerOpen(!isStartDatePickerOpen)}
+                      />
+                      <FiCalendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                      {isStartDatePickerOpen && (
+                        <CalendarPicker value={formData.startDate} onSelect={handleDateSelect} name="startDate" />
+                      )}
+                    </div>
+                    {formErrors.startDate && <p className="text-red-500 text-sm">{formErrors.startDate}</p>}
+                  </div>
+
+                  <div className="space-y-2 relative">
+                    <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                      Expected End Date <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.expectedEndDate}
+                        readOnly
+                        placeholder="YYYY-MM-DD"
+                        className={`h-12 pr-10 cursor-pointer ${formErrors.expectedEndDate ? "border-red-500 focus:ring-red-500" : ""}`}
+                        onClick={() => formData.startDate && setIsExpectedEndDatePickerOpen(!isExpectedEndDatePickerOpen)}
+                        disabled={!formData.startDate}
+                      />
+                      <FiCalendar className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                      {isExpectedEndDatePickerOpen && (
+                        <CalendarPicker value={formData.expectedEndDate} onSelect={handleDateSelect} name="expectedEndDate" />
+                      )}
+                    </div>
+                    {formErrors.expectedEndDate && <p className="text-red-500 text-sm">{formErrors.expectedEndDate}</p>}
                   </div>
                 </div>
-                {/* Display Region */}
-                <div className="p-4 flex flex-col">
-                  <p className="text-[10px] sm:text-sm text-gray-600 mb-2">
-                    {formData.attachments.length > 0
-                      ? `${formData.attachments.length} file${
-                          formData.attachments.length > 1 ? "s" : ""
-                        } chosen`
-                      : "No files chosen"}
-                  </p>
-                  {formData.attachments.length > 0 && (
-                    <div className="max-h-40 sm:max-h-48 overflow-y-auto">
-                      <div className="grid grid-cols-1 gap-2 w-full">
-                        {formData.attachments.map((file, index) => {
-                          const fileName = file.name;
-                          const extension = fileName.split(".").pop().toLowerCase();
-                          const truncatedName = fileName.substring(
-                            0,
-                            Math.min(15, fileName.length - extension.length - 1)
-                          );
-                          const displayName = `${truncatedName}...${extension}`;
+              </div>
 
-                          return (
-                            <div
-                              key={`attachment-${index}`}
-                              className="relative group flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-md text-sm sm:text-base hover:bg-gray-100 transition-all duration-200 w-full"
-                            >
-                              <div className="flex items-center gap-2 sm:gap-3 truncate">
-                                <div className="text-lg sm:text-2xl">{getFileIcon(file)}</div>
-                                <span
-                                  className="text-gray-600 text-xs sm:text-base truncate"
-                                  title={fileName}
-                                >
-                                  {displayName}
-                                </span>
+              {/* Right: Upload */}
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold text-gray-800">
+                    Project Documents (PDF, Word, Excel, PPT)
+                  </Label>
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-all cursor-pointer ${
+                      dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50"
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                      onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                      className="hidden"
+                    />
+                    <FiUpload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
+                    <p className="mt-3 text-sm sm:text-base text-gray-600">
+                      Drag & drop documents here, or click to select
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Max 10MB per file • PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX only</p>
+                  </div>
+
+                  {fileErrors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      {fileErrors.map((e, i) => (
+                        <p key={i} className="text-red-700 text-sm">{e}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {formData.attachments.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-gray-700">
+                        {formData.attachments.length} document(s) ready
+                      </p>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {formData.attachments.map((file, i) => (
+                          <div key={i} className="bg-white border rounded-lg p-4 flex items-center justify-between group hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {getFileIcon(file.type)}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                                <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeFile(index)}
-                                disabled={loading}
-                                className="text-gray-800 hover:text-[#1447e6] p-1"
-                                aria-label={`Remove ${fileName}`}
-                              >
-                                <FiX size={16} sm={18} />
-                              </Button>
                             </div>
-                          );
-                        })}
+                            <div className="flex items-center gap-2">
+                              {uploadProgress[file.name] !== undefined && (
+                                <div className="w-24">
+                                  <Progress value={uploadProgress[file.name]} className="h-2" />
+                                  <p className="text-xs text-gray-500 mt-1 text-center">{uploadProgress[file.name]}%</p>
+                                </div>
+                              )}
+                              {uploadProgress[file.name] === undefined && (
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => { e.stopPropagation(); viewFile(file); }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <FiEye className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                                  >
+                                    <FiX className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="description"
-              className={`font-semibold flex items-center gap-2 text-xs sm:text-sm ${
-                formErrors.description ? "text-red-500" : "text-gray-800"
-              }`}
-            >
-              <FiFileText aria-hidden="true" className="h-4 w-4 sm:h-5 sm:w-5" />
-              Description
-              {formErrors.description && (
-                <span className="text-[10px] sm:text-xs ml-2">({formErrors.description})</span>
-              )}
-            </Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              disabled={loading}
-              className={`min-h-[40vh] sm:min-h-[60vh] border-gray-300 focus:ring-[#1447e6] text-gray-800 placeholder:text-gray-400 rounded-md text-sm w-full ${
-                formErrors.description ? "border-red-300" : ""
-              } touch-manipulation`}
-              placeholder="Describe your project..."
-              aria-label="Project description"
-            />
-          </div>
+            {/* Description */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold text-gray-800 flex items-center gap-1">
+                Project Description <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Provide a detailed description of the project scope, objectives, deliverables, and any special requirements..."
+                className={`min-h-48 text-base ${formErrors.description ? "border-red-500 focus:ring-red-500" : ""}`}
+              />
+              {formErrors.description && <p className="text-red-500 text-sm">{formErrors.description}</p>}
+            </div>
 
-          <div className="flex justify-end mt-4 sm:mt-6">
-            <Button
-              type="submit"
-              form="project-form"
-              disabled={loading}
-              className="flex items-center gap-2 bg-[#1447e6] hover:bg-[#0f3cb5] text-white rounded-md px-4 sm:px-6 py-2 text-xs sm:text-sm w-full sm:w-auto"
-              aria-label="Create project"
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-                    ></path>
-                  </svg>
-                  Creating...
-                </>
+            {/* Submit */}
+            <div className="flex justify-center sm:justify-end pt-8">
+              <Button
+                type="submit"
+                size="lg"
+                disabled={!isFormValid()}
+                className="bg-blue-600  hover:from-blue-700 hover:to-indigo-700 text-white font-semibold px-10 py-6 text-lg rounded-xl shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-3 min-w-64 justify-center"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" />
+                    </svg>
+                    Creating Project...
+                  </>
+                ) : (
+                  <>
+                    <FiCheck className="h-6 w-6" />
+                    Create Project
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div className="fixed inset-0  z-50 flex items-center justify-center p-4" onClick={closePreview}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-full overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b bg-gray-50">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-4">{previewFile.name}</h3>
+              <Button variant="ghost" size="icon" onClick={closePreview}>
+                <FiX className="h-6 w-6" />
+              </Button>
+            </div>
+            <div className="flex-1 bg-gray-100 p-4 sm:p-6 overflow-auto">
+              {previewFile.type === "application/pdf" ? (
+                <iframe src={previewFile.url} className="w-full h-full min-h-96 rounded-lg border" title={previewFile.name} />
               ) : (
-                <>Create Project</>
+                <div className="bg-white border-2 border-dashed rounded-xl w-full h-96 flex flex-col items-center justify-center">
+                  <FiFileText className="h-16 w-16 text-gray-400 mb-4" />
+                  <p className="text-gray-600 text-lg">Preview not available</p>
+                  <p className="text-gray-500 text-sm mt-2">Download to view {previewFile.type.split('/').pop().toUpperCase()} files</p>
+                </div>
               )}
-            </Button>
+            </div>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </>
   );
 }

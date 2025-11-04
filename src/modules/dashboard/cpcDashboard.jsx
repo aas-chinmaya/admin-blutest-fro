@@ -1,6 +1,4 @@
 
-
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -22,14 +20,12 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { LucideCalendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDateUTC } from '@/utils/formatDate';
-import {
-  fetchTasksByDeadline,
-} from '@/features/dashboard/dashboardSlice';
+import { fetchTasksByDeadline } from '@/features/dashboard/dashboardSlice';
 import { fetchAllProjects } from '@/features/projectSlice';
 import { fetchAllTeams } from '@/features/teamSlice';
 import { getAllTaskList } from '@/features/taskSlice';
 import { fetchClients } from '@/features/clientSlice';
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 // Chart Configuration
 const chartConfig = {
@@ -99,22 +95,21 @@ export function CpcDashboard() {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = useState('7d');
-  const [taskFilter, setTaskFilter] = useState('all');
   const { currentUser } = useCurrentUser();
 
-  // Selectors
-  const { data: tasksData = [], error: tasksError, status: tasksStatus } = useSelector(
-    (state) => state.dashboard.deadlineTasks || {}
-  );
+  // Access state for all API calls
+  const { data, status: tasksStatus, error: tasksError } = useSelector((state) => state.dashboard.deadlineTasks);
   const { projects = [], status: projectStatus, error: projectError } = useSelector((state) => state.project);
   const { allTeams = [], status: teamStatus, error: teamError } = useSelector((state) => state.team);
   const { allTaskList = [], status: taskListStatus, error: taskListError } = useSelector((state) => state.task);
   const { clients = [], fetchClientsLoading, error: clientError } = useSelector((state) => state.client);
-  const displayName = currentUser?.name || "User";
+  const displayName = currentUser?.name || 'User';
+
+  
 
   // Loading and error states
-  const isLoading = tasksStatus === 'loading' || projectStatus === 'loading' || teamStatus === 'loading' || fetchClientsLoading;
-  const hasError = tasksError || projectError || teamError || clientError || taskListError;
+  const isLoading = tasksStatus === 'loading' || projectStatus === 'loading' || teamStatus === 'loading' || taskListStatus === 'loading' || fetchClientsLoading;
+  const hasError = tasksError || projectError || teamError || taskListError || clientError;
 
   // Animated counts
   const animatedProjects = useCountUp(projects.length || 0);
@@ -122,13 +117,22 @@ export function CpcDashboard() {
   const animatedTasks = useCountUp(allTaskList.length || 0);
   const animatedTeams = useCountUp(allTeams.length || 0);
 
-  // Fetch data
+  // Fetch data on mount with individual error handling
   useEffect(() => {
-    dispatch(fetchTasksByDeadline());
-    dispatch(fetchAllProjects());
-    dispatch(fetchAllTeams());
-    dispatch(getAllTaskList());
-    dispatch(fetchClients());
+    const fetchData = async () => {
+      try {
+        await Promise.all([
+          dispatch(fetchTasksByDeadline()).unwrap(),
+          dispatch(fetchAllProjects()).unwrap(),
+          dispatch(fetchAllTeams()).unwrap(),
+          dispatch(getAllTaskList()).unwrap(),
+          dispatch(fetchClients()).unwrap(),
+        ]);
+      } catch (err) {
+        // Error handling is managed by Redux state
+      }
+    };
+    fetchData();
   }, [dispatch]);
 
   // Mobile time range adjustment
@@ -163,14 +167,6 @@ export function CpcDashboard() {
       bgColor: 'bg-amber-500',
     },
   ];
-
-  // Task filtering
-  const today = new Date().toISOString().split('T')[0];
-  const dueTodayTasks = Array.isArray(tasksData) ? tasksData.filter(
-    (task) => task.status !== 'Completed' && formatDateUTC(task.deadline) === today
-  ) : [];
-  const allDueTasks = Array.isArray(tasksData) ? tasksData.filter((task) => task.status !== 'Completed') : [];
-  const displayedTasks = taskFilter === 'today' ? dueTodayTasks : allDueTasks;
 
   // Chart data
   const formatDate = (dateString) => {
@@ -208,8 +204,8 @@ export function CpcDashboard() {
     }
 
     // Tasks
-    if (Array.isArray(tasksData)) {
-      tasksData.forEach((task) => {
+    if (Array.isArray(data)) {
+      data.forEach((task) => {
         const createdAt = task.createdAt || task.created_at;
         if (createdAt) {
           const date = new Date(createdAt);
@@ -255,7 +251,7 @@ export function CpcDashboard() {
     return Array.from(dateMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [tasksData, projects, allTeams, clients, timeRange]);
+  }, [data, projects, allTeams, clients, timeRange]);
 
   const safeChartData =
     chartData.length > 0
@@ -306,7 +302,7 @@ export function CpcDashboard() {
             animate="visible"
             variants={headerVariants}
           >
-            {displayName.split("").map((char, i) => (
+            {displayName.split('').map((char, i) => (
               <motion.span
                 key={`name-${i}`}
                 custom={i + 4}
@@ -325,7 +321,7 @@ export function CpcDashboard() {
           animate="visible"
           variants={headerVariants}
         >
-          {"Welcome to BluePrint!".split('').map((char, i) => (
+          {'Welcome to BluePrint!'.split('').map((char, i) => (
             <motion.span
               key={`welcome-${i}`}
               custom={i}
@@ -425,7 +421,7 @@ export function CpcDashboard() {
             <Area dataKey="clients" type="natural" fill="url(#fillClients)" stroke="#4f46e5" stackId="a" />
             <Area dataKey="projects" type="natural" fill="url(#fillProjects)" stroke="#3b82f6" stackId="a" />
             <Area dataKey="tasks" type="natural" fill="url(#fillTasks)" stroke="#10b981" stackId="a" />
-            <Area dataKey="teams" type="natural" fill="url(#fillTeams)" stroke="#f59e0b" stackId="a" />
+            <sArea dataKey="teams" type="natural" fill="url(#fillTeams)" stroke="#f59e0b" stackId="a" />
           </AreaChart>
         </ChartContainer>
         {chartData.length === 0 && (
@@ -436,63 +432,58 @@ export function CpcDashboard() {
       </div>
 
       {/* Tasks Section */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Upcoming Tasks</h2>
-          <Select value={taskFilter} onValueChange={setTaskFilter}>
-            <SelectTrigger className="w-40 bg-gray-100 hover:bg-blue-100 focus:ring-blue-500" size="sm">
-              <SelectValue placeholder="Select filter" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl bg-white shadow-lg">
-              <SelectItem value="all">All Due</SelectItem>
-              <SelectItem value="today">Due Today</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="bg-white rounded-xl shadow-lg p-6 max-h-[400px] overflow-y-auto">
-          {displayedTasks.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-lg font-medium text-gray-600">
-                No {taskFilter === 'today' ? 'tasks due today' : 'upcoming tasks'} to show.
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                {taskFilter === 'today'
-                  ? 'Check back tomorrow or view all due tasks.'
-                  : "You're all caught up! Enjoy a task-free moment."}
-              </p>
-            </div>
-          ) : (
-            displayedTasks.map((task) => (
-              <div
-                key={task._id}
-                onClick={() => router.push(`/task/${task.task_id}`)}
-                className="flex items-center justify-between p-4 mb-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
-              >
-                <div className="flex items-center gap-4">
-                  <LucideCalendar className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-800">{task.title}</h3>
-                    <p className="text-xs text-gray-500">Priority: {task.priority || 'N/A'}</p>
-                  </div>
-                </div>
-                <span
-                  className={`px-3 py-1 text-xs font-medium rounded-full ${
-                    task.status === 'In Progress'
-                      ? 'bg-emerald-100 text-emerald-600'
-                      : task.status === 'To Do'
-                      ? 'bg-indigo-100 text-indigo-600'
-                      : task.status === 'Completed'
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-amber-100 text-amber-600'
-                  }`}
-                >
-                  {task.status}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
+     
+      <div className="p-5 text-gray-700">
+  <h2 className="text-lg font-semibold mb-2">Due Tasks</h2>
+  <div className="bg-white rounded-xl shadow-lg p-6 h-[400px] overflow-y-auto">
+    {tasksStatus === 'failed' ? (
+      <div className="text-center py-12">
+        <p className="text-lg font-medium text-red-600">Failed to load tasks: {tasksError}</p>
+        <p className="text-sm text-gray-500 mt-2">Please try again later.</p>
       </div>
+    ) : data.length === 0 ? (
+      <div className="text-center py-12">
+        <p className="text-lg font-medium text-gray-600">No deadline tasks to show.</p>
+        <p className="text-sm text-gray-500 mt-2">You're all caught up! Enjoy a task-free moment.</p>
+      </div>
+    ) : (
+      data
+        // .sort((a, b) => new Date(b.deadline) - new Date(a.deadline)) // Sort by deadline, most recent first
+       
+        .map((task) => (
+          <div
+            key={task._id}
+            onClick={() => router.push(`/workspace/task/${task.task_id}`)}
+            className="flex items-center justify-between p-4 mb-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+          >
+            <div className="flex items-center gap-4">
+              <LucideCalendar className="h-5 w-5 text-gray-500" />
+              <div>
+                <h3 className="text-sm font-medium text-gray-800">{task.title}</h3>
+                <p className="text-xs text-gray-500">
+                  Deadline: {task.deadline ? formatDateUTC(task.deadline) : 'N/A'}
+                </p>
+                <p className="text-xs text-gray-500">Priority: {task.priority || 'N/A'}</p>
+              </div>
+            </div>
+            <span
+              className={`px-3 py-1 text-xs font-medium rounded-full ${
+                task.status === 'In Progress'
+                  ? 'bg-emerald-100 text-emerald-600'
+                  : task.status === 'To Do'
+                  ? 'bg-indigo-100 text-indigo-600'
+                  : task.status === 'Completed'
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'bg-amber-100 text-amber-600'
+              }`}
+            >
+              {task.status || 'Unknown'}
+            </span>
+          </div>
+        ))
+    )}
+  </div>
+</div>
     </div>
   );
 }

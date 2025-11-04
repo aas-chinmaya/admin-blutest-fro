@@ -9,6 +9,9 @@ import notificationReducer from '@/features/shared/notificationSlice';
 import userReducer from '@/features/shared/userSlice';
 
 //2.dashbaord/overview
+import { cpcDashboardReducer, employeeDashboardReducer,deadlineReducer } from "@/features/dashboard/index";
+
+
 import dashboardReducer from '@/features/dashboard/dashboardSlice';
 
 //3.marketing
@@ -28,6 +31,7 @@ import taskReducer from '@/features/taskSlice';
 import subTaskReducer from '@/features/subTaskSlice';
 
 import bugReducer from '@/features/bugSlice';
+import issuesReducer from '@/features/issues/issuesSlice';
 import documentReducer from '@/features/documentSlice';
 
 import teamMembersReducer from '@/features/teamMembersSlice';
@@ -89,7 +93,11 @@ export const store = configureStore({
 
 
     //dashboard
+    cpcDashboard: cpcDashboardReducer,
+    employeeDashboard: employeeDashboardReducer,
+    deadline:deadlineReducer,
 
+    
   dashboard:dashboardReducer,
   projectAnalytics: projectAnalyticsReducer,
 meet:meetReducer,
@@ -107,6 +115,7 @@ meet:meetReducer,
   subTask:subTaskReducer,
   team: teamReducer,
   bugs: bugReducer,
+  issues: issuesReducer,
   cause: causeReducer,
  
 

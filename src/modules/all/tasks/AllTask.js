@@ -1,14 +1,16 @@
 
 
 
+
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  getAllTaskByEmployeeId,
-  selectAllTaskListByEmployeeId,
+  getAllTaskList,
+  selectAllTaskList,
+  selectTaskStatus,
 } from '@/features/taskSlice';
 import {
   Bug as BugIcon,
@@ -46,13 +48,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/Pagination";
 import { FiX } from "react-icons/fi";
-import { formatDateUTC } from '@/utils/formatDate';
 
-// Status and priority styling
 const statusColors = {
-  Planned: 'bg-green-100 text-green-700 border-green-200',
-  'In Progress': 'bg-blue-100 text-blue-700 border-blue-200',
-  Completed: 'bg-gray-100 text-gray-700 border-gray-200',
+  Pending: 'bg-green-100 text-green-700 border-green-200',
+  'In Progress': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  Completed: 'bg-blue-100 text-blue-700 border-blue-200',
 };
 
 const priorityColors = {
@@ -63,8 +63,8 @@ const priorityColors = {
 
 // Status and priority filter options
 const statusFilterOptions = [
-  { value: "all", label: "All Status" },
-  { value: "Planned", label: "Planned" },
+  { value: "all", label: "All Tasks" },
+  { value: "Pending", label: "Pending" },
   { value: "In Progress", label: "In Progress" },
   { value: "Completed", label: "Completed" },
 ];
@@ -78,12 +78,10 @@ const priorityFilterOptions = [
 
 // Sort options
 const sortOptions = [
-  { value: "id-asc", label: "ID (Low to High)" },
-  { value: "id-desc", label: "ID (High to Low)" },
+  { value: "task_id-asc", label: "Task ID (Low to High)" },
+  { value: "task_id-desc", label: "Task ID (High to Low)" },
   { value: "title-asc", label: "Title (A-Z)" },
   { value: "title-desc", label: "Title (Z-A)" },
-  { value: "projectName-asc", label: "Project (A-Z)" },
-  { value: "projectName-desc", label: "Project (Z-A)" },
   { value: "status-asc", label: "Status (A-Z)" },
   { value: "status-desc", label: "Status (Z-A)" },
   { value: "priority-asc", label: "Priority (Low to High)" },
@@ -92,26 +90,23 @@ const sortOptions = [
   { value: "deadline-asc", label: "Deadline (Oldest First)" },
 ];
 
-const EmployeeTasksList = () => {
-  const dispatch = useDispatch();
+export default function AllTask() {
   const router = useRouter();
-  const employeeTasks = useSelector(selectAllTaskListByEmployeeId);
-  const { loading: userLoading, employeeData } = useSelector((state) => state.user);
-  const { isLoading } = useSelector((state) => state.task);
-  const employeeId = employeeData?.employeeID;
-
+  const dispatch = useDispatch();
+  const tasks = useSelector(selectAllTaskList) || [];
+  const status = useSelector(selectTaskStatus);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
-  const [sortBy, setSortBy] = useState("title-asc");
+  const [sortBy, setSortBy] = useState("task_id-asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
 
   useEffect(() => {
-    if (employeeId) {
-      dispatch(getAllTaskByEmployeeId(employeeId));
+    if (status === 'idle') {
+      dispatch(getAllTaskList());
     }
-  }, [dispatch, employeeId]);
+  }, [status, dispatch]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -119,38 +114,28 @@ const EmployeeTasksList = () => {
 
   // Update currentPage if it exceeds totalPages
   useEffect(() => {
-    const totalPages = Math.ceil((employeeTasks?.length || 0) / itemsPerPage);
+    const totalPages = Math.ceil((tasks?.length || 0) / itemsPerPage);
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     } else if (totalPages === 0 && currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [employeeTasks, itemsPerPage, currentPage]);
+  }, [tasks, itemsPerPage, currentPage]);
 
-  // Process tasks
-  const processedTasks = useMemo(() => {
-    return employeeTasks.map((task) => ({
-      ...task,
-      id: task.task_id,
-      _id: task._id,
-      projectName: task.projectName || 'N/A',
-    }));
-  }, [employeeTasks]);
-
-  // Task statistics
-  const taskStats = useMemo(() => ({
-    total: processedTasks.length,
-    planned: processedTasks.filter((item) => item.status === 'Planned').length,
-    inProgress: processedTasks.filter((item) => item.status === 'In Progress').length,
-    completed: processedTasks.filter((item) => item.status === 'Completed').length,
-    highPriority: processedTasks.filter((item) => item.priority === 'High').length,
-    mediumPriority: processedTasks.filter((item) => item.priority === 'Medium').length,
-    lowPriority: processedTasks.filter((item) => item.priority === 'Low').length,
-  }), [processedTasks]);
+  // Calculate task statistics
+  const taskStats = {
+    total: tasks.length,
+    pending: tasks.filter((task) => task.status === 'Pending').length,
+    inProgress: tasks.filter((task) => task.status === 'In Progress').length,
+    completed: tasks.filter((task) => task.status === 'Completed').length,
+    highPriority: tasks.filter((task) => task.priority === 'High').length,
+    mediumPriority: tasks.filter((task) => task.priority === 'Medium').length,
+    lowPriority: tasks.filter((task) => task.priority === 'Low').length,
+  };
 
   // Filter and sort tasks
-  const filteredAndSortedTasks = useMemo(() => {
-    let filtered = processedTasks;
+  const filteredAndSortedTasks = () => {
+    let filtered = tasks;
 
     if (selectedStatus !== 'all') {
       filtered = filtered.filter((task) => task.status === selectedStatus);
@@ -166,8 +151,7 @@ const EmployeeTasksList = () => {
         (task) =>
           task.title?.toLowerCase().includes(term) ||
           task.projectName?.toLowerCase().includes(term) ||
-          task.assignedBy?.toLowerCase().includes(term) ||
-          task.id?.toString().includes(term)
+          task.task_id?.toString().includes(term)
       );
     }
 
@@ -177,18 +161,14 @@ const EmployeeTasksList = () => {
     // Create a shallow copy of the filtered array before sorting
     return [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case "id-asc":
-          return (a.id || 0) - (b.id || 0);
-        case "id-desc":
-          return (b.id || 0) - (a.id || 0);
+        case "task_id-asc":
+          return (a.task_id || 0) - (b.task_id || 0);
+        case "task_id-desc":
+          return (b.task_id || 0) - (a.task_id || 0);
         case "title-asc":
           return (a.title || "").localeCompare(b.title || "");
         case "title-desc":
           return (b.title || "").localeCompare(a.title || "");
-        case "projectName-asc":
-          return (a.projectName || "").localeCompare(b.projectName || "");
-        case "projectName-desc":
-          return (b.projectName || "").localeCompare(a.projectName || "");
         case "status-asc":
           return (a.status || "").localeCompare(b.status || "");
         case "status-desc":
@@ -205,11 +185,12 @@ const EmployeeTasksList = () => {
           return 0;
       }
     });
-  }, [processedTasks, selectedStatus, selectedPriority, searchTerm, sortBy]);
+  };
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredAndSortedTasks.length / itemsPerPage);
-  const paginatedTasks = filteredAndSortedTasks.slice(
+  const sortedTasks = filteredAndSortedTasks();
+  const totalPages = Math.ceil(sortedTasks.length / itemsPerPage);
+  const paginatedTasks = sortedTasks.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -222,7 +203,7 @@ const EmployeeTasksList = () => {
     setSearchTerm('');
     setSelectedStatus('all');
     setSelectedPriority('all');
-    setSortBy("title-asc");
+    setSortBy("task_id-asc");
   };
 
   // Loading skeleton
@@ -257,7 +238,7 @@ const EmployeeTasksList = () => {
       </h3>
       <p className="text-gray-600 mb-6">
         {selectedStatus === 'all' && selectedPriority === 'all' && !searchTerm
-          ? "No tasks assigned."
+          ? "No tasks available."
           : "No tasks match your current filters. Try adjusting your search or filter criteria."}
       </p>
       <Button
@@ -270,7 +251,7 @@ const EmployeeTasksList = () => {
     </div>
   );
 
-  if (isLoading || userLoading) {
+  if (status === 'loading' && tasks.length === 0) {
     return (
       <div className="w-full min-h-screen bg-white p-4 sm:p-8">
         <Card className="mx-auto bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -295,7 +276,7 @@ const EmployeeTasksList = () => {
       <Card className="mx-auto bg-white border border-gray-200 rounded-xl shadow-sm">
         <CardHeader className="bg-gray-200 rounded-t-xl p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-            <h1 className="text-xl sm:text-2xl font-bold">My Tasks</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">All Tasks</h1>
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -328,7 +309,7 @@ const EmployeeTasksList = () => {
             <div className="flex-1 min-w-[140px]">
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="text-sm w-full">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder="All Tasks" />
                 </SelectTrigger>
                 <SelectContent>
                   {statusFilterOptions.map((option) => (
@@ -342,8 +323,8 @@ const EmployeeTasksList = () => {
                         <Badge variant="secondary" className={`ml-2 ${statusColors[option.value] || "bg-gray-100 text-gray-700"}`}>
                           {option.value === "all"
                             ? taskStats.total
-                            : option.value === "Planned"
-                            ? taskStats.planned
+                            : option.value === "Pending"
+                            ? taskStats.pending
                             : option.value === "In Progress"
                             ? taskStats.inProgress
                             : taskStats.completed}
@@ -408,63 +389,76 @@ const EmployeeTasksList = () => {
           </div>
 
           {/* Tasks Table */}
-          {isLoading && filteredAndSortedTasks.length > 0 ? (
+          {status === 'loading' && sortedTasks.length > 0 ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-600" />
             </div>
-          ) : filteredAndSortedTasks.length === 0 ? (
+          ) : sortedTasks.length === 0 ? (
             <NoResults />
           ) : (
             <>
               <div className="overflow-x-auto rounded-md border min-h-screen">
+               
                 <Table className="w-full table-fixed">
-                  <TableHeader>
-                    <TableRow className="bg-gray-50 text-xs sm:text-sm">
-                      <TableHead className="font-bold text-gray-700 w-1/2">Title</TableHead>
-                      <TableHead className="font-bold text-gray-700 hidden md:table-cell w-1/5">Project</TableHead>
-                      <TableHead className="font-bold text-gray-700 w-[100px]">Status</TableHead>
-                      <TableHead className="font-bold text-gray-700 hidden lg:table-cell w-[120px]">Deadline</TableHead>
-                      <TableHead className="font-bold text-gray-700 hidden sm:table-cell w-[100px]">Priority</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedTasks.map((task) => (
-                      <TableRow 
-                        key={task._id} 
-                        className="text-xs sm:text-sm cursor-pointer hover:bg-gray-50" 
-                        onClick={() => handleRowClick(task)}
-                      >
-                        <TableCell className="font-medium text-gray-900 w-1/2 truncate overflow-hidden text-ellipsis whitespace-nowrap" title={task.title}>
-                          {task.title}
-                        </TableCell>
-                        <TableCell className="text-gray-600 hidden md:table-cell w-1/5">
-                          {task.projectName}
-                        </TableCell>
-                        <TableCell className="w-[100px]">
-                          <Badge className={`${statusColors[task.status]} text-xs capitalize`}>
-                            {task.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-gray-600 hidden lg:table-cell w-[120px]">
-                          {formatDateUTC(task.deadline) || 'No Deadline'}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell w-[100px]">
-                          <Badge className={`${priorityColors[task.priority]} text-xs`}>
-                            {task.priority}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+  <TableHeader>
+    <TableRow className="bg-gray-50 text-xs sm:text-sm">
+      <TableHead className="font-bold text-gray-700 w-1/2">Title</TableHead>
+      <TableHead className="font-bold text-gray-700 hidden md:table-cell w-1/5">Project Name</TableHead>
+      <TableHead className="font-bold text-gray-700 w-[80px]">Status</TableHead>
+      <TableHead className="font-bold text-gray-700 hidden lg:table-cell w-[120px]">Deadline</TableHead>
+      <TableHead className="font-bold text-gray-700 hidden sm:table-cell w-[100px]">Priority</TableHead>
+    </TableRow>
+  </TableHeader>
+
+  <TableBody>
+    {paginatedTasks.map((task) => (
+      <TableRow
+        key={task.task_id}
+        className="text-xs sm:text-sm cursor-pointer hover:bg-gray-50"
+        onClick={() => handleRowClick(task)}
+      >
+        {/* 🧠 Title Column (takes half width, truncates nicely) */}
+        <TableCell
+          className="font-medium text-gray-900 w-1/2 truncate overflow-hidden text-ellipsis whitespace-nowrap"
+          title={task.title}
+        >
+          {task.title}
+        </TableCell>
+
+        <TableCell className="text-gray-600 hidden md:table-cell w-1/5">
+          {task.projectName || 'N/A'}
+        </TableCell>
+
+        <TableCell className="w-[100px]">
+          <Badge className={`${statusColors[task.status]} text-xs capitalize`}>
+            {task.status}
+          </Badge>
+        </TableCell>
+
+        <TableCell className="text-gray-600 hidden lg:table-cell w-[120px]">
+          {task.deadline
+            ? new Date(task.deadline).toLocaleDateString('en-IN')
+            : 'N/A'}
+        </TableCell>
+
+        <TableCell className="hidden sm:table-cell w-[100px]">
+          <Badge className={`${priorityColors[task.priority]} text-xs`}>
+            {task.priority}
+          </Badge>
+        </TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
+
               </div>
 
               {/* Pagination Section */}
               <div className="flex flex-col sm:flex-row items-center justify-between px-2 py-4 gap-4 sm:gap-0">
                 <div className="text-xs sm:text-sm text-gray-700">
                   Page {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                  {Math.min(currentPage * itemsPerPage, filteredAndSortedTasks.length)} of{" "}
-                  {filteredAndSortedTasks.length} Tasks
+                  {Math.min(currentPage * itemsPerPage, sortedTasks.length)} of{" "}
+                  {sortedTasks.length} Tasks
                 </div>
                 {totalPages > 1 && (
                   <Pagination>
@@ -537,6 +531,4 @@ const EmployeeTasksList = () => {
       </Card>
     </div>
   );
-};
-
-export default EmployeeTasksList;
+}

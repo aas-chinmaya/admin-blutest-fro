@@ -1,24 +1,28 @@
 
 
 
-// MyProjectsList.jsx (Employee View - My Projects)
+
+// ProjectList.jsx (Admin View - All Projects)
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProjectsByEmployeeId } from '@/features/projectSlice';
+import { fetchAllProjects, deleteProject } from '@/features/projectSlice';
 import { useRouter } from 'next/navigation';
 import {
   FiPaperclip,
   FiClock,
   FiAlertCircle,
   FiCheckCircle,
+  FiPlus,
   FiSearch,
   FiFilter,
   FiChevronDown,
   FiArrowUp,
   FiArrowDown,
   FiX,
+  FiTrash2,
+  FiEdit3,
   FiCalendar,
   FiTarget,
   FiChevronLeft,
@@ -43,43 +47,54 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 const statusConfig = {
   Planned: { badge: 'bg-amber-50 text-amber-700 border-amber-200', icon: <FiClock className="w-4 h-4 text-amber-600" /> },
   'In Progress': { badge: 'bg-blue-50 text-blue-700 border-blue-200', icon: <FiAlertCircle className="w-4 h-4 text-blue-600" /> },
-  Completed: { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <FiCheckCircle className="h-4 h-4 text-emerald-600" /> },
+  Completed: { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: <FiCheckCircle className="w-4 h-4 text-emerald-600" /> },
 };
 
-export default function MyProjectsList({ employeeId }) {
+export default function ProjectList() {
   const dispatch = useDispatch();
   const router = useRouter();
-  const { employeeProjects = [], status = {} } = useSelector((state) => state.project || {});
-  const isLoading = status.fetchEmployeeProjects === 'loading';
+  const { projects = [], status } = useSelector((state) => state.project || {});
+  const isLoading = status.fetchAllProjects === 'loading';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [sortField, setSortField] = useState('projectName');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [deleteProjectId, setDeleteProjectId] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const projectsPerPage = 8;
 
-  useEffect(() => { if (employeeId) dispatch(fetchProjectsByEmployeeId(employeeId)); }, [dispatch, employeeId]);
+  useEffect(() => { dispatch(fetchAllProjects()); }, [dispatch]);
 
-  const projectStats = Array.isArray(employeeProjects)
+  const projectStats = Array.isArray(projects)
     ? {
-        total: employeeProjects.length,
-        planned: employeeProjects.filter(p => p.status === 'Planned').length,
-        inprogress: employeeProjects.filter(p => p.status === 'In Progress').length,
-        completed: employeeProjects.filter(p => p.status === 'Completed').length,
+        total: projects.length,
+        planned: projects.filter(p => p.status === 'Planned').length,
+        inprogress: projects.filter(p => p.status === 'In Progress').length,
+        completed: projects.filter(p => p.status === 'Completed').length,
       }
     : { total: 0, planned: 0, inprogress: 0, completed: 0 };
 
   const getFilteredSorted = () => {
-    if (!Array.isArray(employeeProjects)) return [];
-    let list = [...employeeProjects];
+    if (!Array.isArray(projects)) return [];
+    let list = [...projects];
     if (selectedStatus !== 'all') list = list.filter(p => p.status === selectedStatus);
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
@@ -103,12 +118,26 @@ export default function MyProjectsList({ employeeId }) {
 
   const handlePageChange = (page) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); };
   const handleView = (projectId) => router.push(`/project/${projectId}`);
+  const handleEdit = (projectId) => router.push(`/project/edit/${projectId}`);
+  const handleCreate = () => router.push('/project/onboarding');
   const handleSort = (field) => {
     if (sortField === field) setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDirection('asc'); }
   };
   const handleStatusFilter = (status) => setSelectedStatus(status);
   const clearFilters = () => { setSearchTerm(''); setSelectedStatus('all'); setSortField('projectName'); setSortDirection('asc'); setCurrentPage(1); };
+
+  const openDeleteDialog = (projectId) => { setDeleteProjectId(projectId); setIsDeleteModalOpen(true); };
+  const confirmDelete = async () => {
+    if (!deleteProjectId) return;
+    try {
+      await dispatch(deleteProject(deleteProjectId)).unwrap();
+      toast.success('Project deleted successfully!');
+      dispatch(fetchAllProjects());
+      if (paginatedProjects.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
+    } catch (e) { toast.error(e?.message || 'Failed to delete project.'); }
+    finally { setIsDeleteModalOpen(false); setDeleteProjectId(null); }
+  };
 
   const HeaderSkeleton = () => (
     <div className="mb-8">
@@ -118,6 +147,7 @@ export default function MyProjectsList({ employeeId }) {
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <Skeleton className="h-11 w-full sm:w-72" />
           <Skeleton className="h-11 w-44" />
+          <Skeleton className="h-11 w-36" />
         </div>
       </div>
     </div>
@@ -156,9 +186,10 @@ export default function MyProjectsList({ employeeId }) {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        {/* Header */}
         <header className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground whitespace-nowrap">My Projects</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground whitespace-nowrap">All Projects</h1>
             <div className="flex-1" />
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto items-stretch sm:items-center">
               <div className="relative flex-1 sm:max-w-md">
@@ -166,7 +197,7 @@ export default function MyProjectsList({ employeeId }) {
                 <Input
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Search my projects..."
+                  placeholder="Search by name, ID, or lead..."
                   className="pl-10"
                 />
                 {searchTerm && (
@@ -204,7 +235,7 @@ export default function MyProjectsList({ employeeId }) {
                   {['projectName', 'projectId', 'status'].map(f => (
                     <DropdownMenuItem key={f} onClick={() => handleSort(f)}>
                       <div className="flex items-center justify-between w-full">
-                        <span>{f === 'projectName' ? 'Name' : f === 'projectId' ? 'projectId' : 'Status'}</span>
+                        <span>{f === 'projectName' ? 'Name' : f === 'projectId' ? 'ID' : 'Status'}</span>
                         {sortField === f && (sortDirection === 'asc' ? <FiArrowUp className="h-4 w-4" /> : <FiArrowDown className="h-4 w-4" />)}
                       </div>
                     </DropdownMenuItem>
@@ -213,19 +244,39 @@ export default function MyProjectsList({ employeeId }) {
                   <DropdownMenuItem onClick={clearFilters} className="text-destructive">Clear All Filters</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button className="gap-2 bg-blue-700 whitespace-nowrap" onClick={handleCreate}>
+                <FiPlus className="h-4 w-4" />
+                <span>New Project</span>
+              </Button>
             </div>
           </div>
         </header>
 
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Project</DialogTitle>
+              <DialogDescription>This action cannot be undone. This will permanently delete the project.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* No Projects */}
         {projectsToShow.length === 0 ? (
           <Card className="p-12 text-center">
             <CardContent>
               <div className="mx-auto w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
                 <FiPaperclip className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">No projects assigned</h3>
+              <h3 className="text-xl font-semibold mb-2">No projects found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm || selectedStatus !== 'all' ? 'No matches found.' : 'You are not part of any projects yet.'}
+                {searchTerm || selectedStatus !== 'all' ? 'Try adjusting your filters.' : 'Create your first project.'}
               </p>
               {(searchTerm || selectedStatus !== 'all') && (
                 <Button onClick={clearFilters} variant="outline">Clear Filters</Button>
@@ -234,6 +285,7 @@ export default function MyProjectsList({ employeeId }) {
           </Card>
         ) : (
           <>
+            {/* Project Cards Grid */}
             <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {paginatedProjects.map(project => {
                 const config = statusConfig[project.status] || {};
@@ -241,49 +293,110 @@ export default function MyProjectsList({ employeeId }) {
                   <Tooltip key={project.projectId}>
                     <TooltipTrigger asChild>
                       <Card
-                        className="overflow-hidden border rounded-xl shadow-sm hover:shadow-lg transition-all cursor-pointer"
+                        className="overflow-hidden border rounded-xl shadow-sm hover:shadow-lg transition-all cursor-pointer group"
                         onClick={() => handleView(project.projectId)}
                       >
                         <CardHeader className="pb-3 bg-muted/30">
-                          <Badge variant="outline" className={`${config.badge} border`}>
-                            {config.icon}
-                            <span className="ml-1">{project.status}</span>
-                          </Badge>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className={`${config.badge} border`}>
+                              {config.icon}
+                              <span className="ml-1">{project.status}</span>
+                            </Badge>
+
+                            {/* Edit & Delete Actions */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEdit(project.projectId);
+                                    }}
+                                  >
+                                    <FiEdit3 className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit Project</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openDeleteDialog(project.projectId);
+                                    }}
+                                  >
+                                    <FiTrash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Project</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
                         </CardHeader>
+
                         <CardContent className="space-y-4">
                           <div>
-                            <h3 className="font-semibold text-lg line-clamp-2 text-primary">
+                            <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-primary transition-colors">
                               {project.projectName || 'Untitled'}
                             </h3>
-                            <p className="text-sm text-muted-foreground">Project ID: {project.projectId}</p>
+                            <p className="text-sm text-muted-foreground">ID: {project.projectId}</p>
                           </div>
                           <Separator />
                           <div className="space-y-3 text-sm">
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary/10"><Briefcase className="h-4 w-4 text-primary" /></AvatarFallback></Avatar>
-                              <div><p className="font-medium">{project.teamLeadName || 'Unassigned'}</p><p className="text-muted-foreground">Lead</p></div>
+                              <Avatar className="h-9 w-9">
+                                <AvatarFallback className="bg-primary/10">
+                                  <Briefcase className="h-4 w-4 text-primary" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">{project.teamLeadName || 'Unassigned'}</p>
+                                <p className="text-muted-foreground">Lead</p>
+                              </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-lg bg-amber-50 flex items-center justify-center"><FiCalendar className="h-4 w-4 text-amber-600" /></div>
-                              <div><p className="font-medium">{project.startDate || 'N/A'}</p><p className="text-muted-foreground">Start</p></div>
+                              <div className="h-9 w-9 rounded-lg bg-amber-50 flex items-center justify-center">
+                                <FiCalendar className="h-4 w-4 text-amber-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{project.startDate || 'N/A'}</p>
+                                <p className="text-muted-foreground">Start</p>
+                              </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center"><FiTarget className="h-4 w-4 text-blue-600" /></div>
-                              <div><p className="font-medium">{project.expectedEndDate || 'N/A'}</p><p className="text-muted-foreground">End</p></div>
+                              <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                                <FiTarget className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{project.expectedEndDate || 'N/A'}</p>
+                                <p className="text-muted-foreground">End</p>
+                              </div>
                             </div>
                           </div>
                         </CardContent>
+
                         <CardFooter className="pt-4 border-t bg-muted/50">
-                          <Button variant="ghost" className="w-full text-primary font-medium">View Details</Button>
+                          <Button variant="ghost" className="w-full text-primary font-medium">
+                            View Details
+                          </Button>
                         </CardFooter>
                       </Card>
                     </TooltipTrigger>
-                    <TooltipContent>Click to view project</TooltipContent>
+                    <TooltipContent>Click to view details</TooltipContent>
                   </Tooltip>
                 );
               })}
             </div>
 
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-8 flex justify-center">
                 <div className="flex items-center gap-2">
@@ -295,7 +408,11 @@ export default function MyProjectsList({ employeeId }) {
                     .map((page, idx, arr) => (
                       <div key={page}>
                         {idx > 0 && arr[idx - 1] !== page - 1 && <span className="px-2 text-muted-foreground">...</span>}
-                        <Button variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)}>
+                        <Button
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => handlePageChange(page)}
+                        >
                           {page}
                         </Button>
                       </div>

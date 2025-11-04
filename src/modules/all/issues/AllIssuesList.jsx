@@ -1,20 +1,18 @@
 
 
+"use client";
 
-'use client';
-
-import React, { useEffect, useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  getAllTaskByEmployeeId,
-  selectAllTaskListByEmployeeId,
-} from '@/features/taskSlice';
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAllBugs } from "@/features/bugSlice";
 import {
   Bug as BugIcon,
   Loader2,
   Search,
+  Filter,
   ChevronDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,27 +44,34 @@ import {
   PaginationPrevious,
 } from "@/components/ui/Pagination";
 import { FiX } from "react-icons/fi";
-import { formatDateUTC } from '@/utils/formatDate';
+// import IssueDetailsViewModal from "@/modules/bug/IssueDetailsViewModal";
+import { formatDateTimeIST } from "@/utils/formatDate";
+import BugDetailsViewModal from "@/modules/bug/BugDetailsViewModal";
 
 // Status and priority styling
 const statusColors = {
-  Planned: 'bg-green-100 text-green-700 border-green-200',
-  'In Progress': 'bg-blue-100 text-blue-700 border-blue-200',
-  Completed: 'bg-gray-100 text-gray-700 border-gray-200',
+  open: "bg-red-100 text-red-700 border-red-200",
+  resolved: "bg-green-100 text-green-700 border-green-200",
 };
 
 const priorityColors = {
-  High: 'bg-red-100 text-red-700 border-red-200',
-  Medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  Low: 'bg-green-100 text-green-700 border-green-200',
+  High: "bg-red-100 text-red-700 border-red-200",
+  Medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  Low: "bg-green-100 text-green-700 border-green-200",
+};
+
+const reviewStatusColors = {
+  NA: "bg-gray-100 text-gray-700 border-gray-200",
+  INREVIEW: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  BUGREPORTED: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  RESOLVED: "bg-green-100 text-green-700 border-green-200",
 };
 
 // Status and priority filter options
 const statusFilterOptions = [
-  { value: "all", label: "All Status" },
-  { value: "Planned", label: "Planned" },
-  { value: "In Progress", label: "In Progress" },
-  { value: "Completed", label: "Completed" },
+  { value: "all", label: "All Issues" },
+  { value: "open", label: "Open" },
+  { value: "resolved", label: "Resolved" },
 ];
 
 const priorityFilterOptions = [
@@ -78,40 +83,40 @@ const priorityFilterOptions = [
 
 // Sort options
 const sortOptions = [
-  { value: "id-asc", label: "ID (Low to High)" },
-  { value: "id-desc", label: "ID (High to Low)" },
   { value: "title-asc", label: "Title (A-Z)" },
   { value: "title-desc", label: "Title (Z-A)" },
-  { value: "projectName-asc", label: "Project (A-Z)" },
-  { value: "projectName-desc", label: "Project (Z-A)" },
   { value: "status-asc", label: "Status (A-Z)" },
   { value: "status-desc", label: "Status (Z-A)" },
   { value: "priority-asc", label: "Priority (Low to High)" },
   { value: "priority-desc", label: "Priority (High to Low)" },
-  { value: "deadline-desc", label: "Deadline (Newest First)" },
-  { value: "deadline-asc", label: "Deadline (Oldest First)" },
+  { value: "deadline-desc", label: "Newest First" },
+  { value: "deadline-asc", label: "Oldest First" },
 ];
 
-const EmployeeTasksList = () => {
+export default function AllissuesList() {
   const dispatch = useDispatch();
-  const router = useRouter();
-  const employeeTasks = useSelector(selectAllTaskListByEmployeeId);
-  const { loading: userLoading, employeeData } = useSelector((state) => state.user);
-  const { isLoading } = useSelector((state) => state.task);
-  const employeeId = employeeData?.employeeID;
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedPriority, setSelectedPriority] = useState('all');
-  const [sortBy, setSortBy] = useState("title-asc");
+  // Define selectors inside component
+  const selectAllBugs = (state) => state.bugs.allBugs;
+  const selectLoading = (state) => state.bugs.loading;
+  const selectError = (state) => state.bugs.error;
+
+  const allBugs = useSelector(selectAllBugs);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedPriority, setSelectedPriority] = useState("all");
+  const [sortBy, setSortBy] = useState("deadline-desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
+  const [selectedBug, setSelectedBug] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (employeeId) {
-      dispatch(getAllTaskByEmployeeId(employeeId));
-    }
-  }, [dispatch, employeeId]);
+    dispatch(fetchAllBugs());
+  }, [dispatch]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -119,84 +124,62 @@ const EmployeeTasksList = () => {
 
   // Update currentPage if it exceeds totalPages
   useEffect(() => {
-    const totalPages = Math.ceil((employeeTasks?.length || 0) / itemsPerPage);
+    const totalPages = Math.ceil((allBugs?.length || 0) / itemsPerPage);
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     } else if (totalPages === 0 && currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [employeeTasks, itemsPerPage, currentPage]);
+  }, [allBugs, itemsPerPage, currentPage]);
 
-  // Process tasks
-  const processedTasks = useMemo(() => {
-    return employeeTasks.map((task) => ({
-      ...task,
-      id: task.task_id,
-      _id: task._id,
-      projectName: task.projectName || 'N/A',
-    }));
-  }, [employeeTasks]);
+  // Calculate issue statistics
+  const issueStats = {
+    total: allBugs?.length || 0,
+    open: allBugs?.filter((bug) => bug.status.toLowerCase() === "open").length || 0,
+    resolved: allBugs?.filter((bug) => bug.status.toLowerCase() === "resolved").length || 0,
+    highPriority: allBugs?.filter((bug) => bug.priority === "High").length || 0,
+    mediumPriority: allBugs?.filter((bug) => bug.priority === "Medium").length || 0,
+    lowPriority: allBugs?.filter((bug) => bug.priority === "Low").length || 0,
+  };
 
-  // Task statistics
-  const taskStats = useMemo(() => ({
-    total: processedTasks.length,
-    planned: processedTasks.filter((item) => item.status === 'Planned').length,
-    inProgress: processedTasks.filter((item) => item.status === 'In Progress').length,
-    completed: processedTasks.filter((item) => item.status === 'Completed').length,
-    highPriority: processedTasks.filter((item) => item.priority === 'High').length,
-    mediumPriority: processedTasks.filter((item) => item.priority === 'Medium').length,
-    lowPriority: processedTasks.filter((item) => item.priority === 'Low').length,
-  }), [processedTasks]);
+  // Filter and sort issues
+  const filteredAndSortedBugs = () => {
+    let filtered = allBugs || [];
 
-  // Filter and sort tasks
-  const filteredAndSortedTasks = useMemo(() => {
-    let filtered = processedTasks;
-
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter((task) => task.status === selectedStatus);
+    if (selectedStatus !== "all") {
+      filtered = filtered.filter((bug) => bug.status.toLowerCase() === selectedStatus);
     }
 
-    if (selectedPriority !== 'all') {
-      filtered = filtered.filter((task) => task.priority === selectedPriority);
+    if (selectedPriority !== "all") {
+      filtered = filtered.filter((bug) => bug.priority === selectedPriority);
     }
 
-    if (searchTerm.trim() !== '') {
+    if (searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (task) =>
-          task.title?.toLowerCase().includes(term) ||
-          task.projectName?.toLowerCase().includes(term) ||
-          task.assignedBy?.toLowerCase().includes(term) ||
-          task.id?.toString().includes(term)
+        (bug) =>
+          bug.bug_id?.toLowerCase().includes(term) ||
+          bug.title?.toLowerCase().includes(term) ||
+          bug.description?.toLowerCase().includes(term) ||
+          bug.taskRef?.toLowerCase().includes(term)
       );
     }
-
-    // Priority order mapping for numeric sorting
-    const priorityOrder = { Low: 1, Medium: 2, High: 3 };
 
     // Create a shallow copy of the filtered array before sorting
     return [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case "id-asc":
-          return (a.id || 0) - (b.id || 0);
-        case "id-desc":
-          return (b.id || 0) - (a.id || 0);
         case "title-asc":
           return (a.title || "").localeCompare(b.title || "");
         case "title-desc":
           return (b.title || "").localeCompare(a.title || "");
-        case "projectName-asc":
-          return (a.projectName || "").localeCompare(b.projectName || "");
-        case "projectName-desc":
-          return (b.projectName || "").localeCompare(a.projectName || "");
         case "status-asc":
           return (a.status || "").localeCompare(b.status || "");
         case "status-desc":
           return (b.status || "").localeCompare(a.status || "");
         case "priority-asc":
-          return (priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0);
+          return (a.priority || "").localeCompare(b.priority || "");
         case "priority-desc":
-          return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+          return (b.priority || "").localeCompare(a.priority || "");
         case "deadline-desc":
           return new Date(b.deadline) - new Date(a.deadline);
         case "deadline-asc":
@@ -205,24 +188,31 @@ const EmployeeTasksList = () => {
           return 0;
       }
     });
-  }, [processedTasks, selectedStatus, selectedPriority, searchTerm, sortBy]);
+  };
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredAndSortedTasks.length / itemsPerPage);
-  const paginatedTasks = filteredAndSortedTasks.slice(
+  const sortedBugs = filteredAndSortedBugs();
+  const totalPages = Math.ceil(sortedBugs.length / itemsPerPage);
+  const paginatedBugs = sortedBugs.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  const handleRowClick = (task) => {
-    router.push(`/workspace/task/${task.task_id}`);
+  const handleViewClick = (bug) => {
+    setSelectedBug(bug);
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedBug(null);
   };
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedStatus('all');
-    setSelectedPriority('all');
-    setSortBy("title-asc");
+    setSearchTerm("");
+    setSelectedStatus("all");
+    setSelectedPriority("all");
+    setSortBy("deadline-desc");
   };
 
   // Loading skeleton
@@ -253,12 +243,12 @@ const EmployeeTasksList = () => {
         <BugIcon className="w-8 h-8 text-gray-400" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        No tasks found
+        No issues found
       </h3>
       <p className="text-gray-600 mb-6">
-        {selectedStatus === 'all' && selectedPriority === 'all' && !searchTerm
-          ? "No tasks assigned."
-          : "No tasks match your current filters. Try adjusting your search or filter criteria."}
+        {selectedStatus === "all" && selectedPriority === "all" && !searchTerm
+          ? "No issues available."
+          : "No issues match your current filters. Try adjusting your search or filter criteria."}
       </p>
       <Button
         onClick={clearFilters}
@@ -270,11 +260,11 @@ const EmployeeTasksList = () => {
     </div>
   );
 
-  if (isLoading || userLoading) {
+  if (loading.allBugsFetch && allBugs.length === 0) {
     return (
       <div className="w-full min-h-screen bg-white p-4 sm:p-8">
         <Card className="mx-auto bg-white border border-gray-200 rounded-xl shadow-sm">
-          <CardHeader className="bg-gray-100 rounded-t-xl p-4 sm:p-6">
+          <CardHeader className="bg-gray-100 text-white rounded-t-xl p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
               <div className="animate-pulse">
                 <div className="h-6 bg-blue-400 rounded w-32 mb-2"></div>
@@ -291,14 +281,14 @@ const EmployeeTasksList = () => {
   }
 
   return (
-    <div className="w-full bg-white">
-      <Card className="mx-auto bg-white border border-gray-200 rounded-xl shadow-sm">
+    <div className="w-full bg-white ">
+      <Card className="mx-auto bg-white border border-gray-200 rounded-xl shadow-sm ">
         <CardHeader className="bg-gray-200 rounded-t-xl p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-            <h1 className="text-xl sm:text-2xl font-bold">My Tasks</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">All Issues</h1>
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6 ">
           {/* Search and Controls */}
           <div className="flex flex-wrap gap-4">
             {/* Search */}
@@ -306,7 +296,7 @@ const EmployeeTasksList = () => {
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search tasks..."
+                  placeholder="Search issues..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 text-sm w-full"
@@ -328,7 +318,7 @@ const EmployeeTasksList = () => {
             <div className="flex-1 min-w-[140px]">
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="text-sm w-full">
-                  <SelectValue placeholder="All Status" />
+                  <SelectValue placeholder="All Issues" />
                 </SelectTrigger>
                 <SelectContent>
                   {statusFilterOptions.map((option) => (
@@ -341,12 +331,10 @@ const EmployeeTasksList = () => {
                         <span>{option.label}</span>
                         <Badge variant="secondary" className={`ml-2 ${statusColors[option.value] || "bg-gray-100 text-gray-700"}`}>
                           {option.value === "all"
-                            ? taskStats.total
-                            : option.value === "Planned"
-                            ? taskStats.planned
-                            : option.value === "In Progress"
-                            ? taskStats.inProgress
-                            : taskStats.completed}
+                            ? issueStats.total
+                            : option.value === "open"
+                            ? issueStats.open
+                            : issueStats.resolved}
                         </Badge>
                       </div>
                     </SelectItem>
@@ -372,12 +360,12 @@ const EmployeeTasksList = () => {
                         <span>{option.label}</span>
                         <Badge variant="secondary" className={`ml-2 ${priorityColors[option.value] || "bg-gray-100 text-gray-700"}`}>
                           {option.value === "all"
-                            ? taskStats.total
+                            ? issueStats.total
                             : option.value === "High"
-                            ? taskStats.highPriority
+                            ? issueStats.highPriority
                             : option.value === "Medium"
-                            ? taskStats.mediumPriority
-                            : taskStats.lowPriority}
+                            ? issueStats.mediumPriority
+                            : issueStats.lowPriority}
                         </Badge>
                       </div>
                     </SelectItem>
@@ -407,50 +395,55 @@ const EmployeeTasksList = () => {
             </div>
           </div>
 
-          {/* Tasks Table */}
-          {isLoading && filteredAndSortedTasks.length > 0 ? (
+          {/* Issues Table */}
+          {loading.allBugsFetch && sortedBugs.length > 0 ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 mr-2 animate-spin text-blue-600" />
             </div>
-          ) : filteredAndSortedTasks.length === 0 ? (
+          ) : sortedBugs.length === 0 ? (
             <NoResults />
           ) : (
             <>
               <div className="overflow-x-auto rounded-md border min-h-screen">
-                <Table className="w-full table-fixed">
+                <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50 text-xs sm:text-sm">
-                      <TableHead className="font-bold text-gray-700 w-1/2">Title</TableHead>
-                      <TableHead className="font-bold text-gray-700 hidden md:table-cell w-1/5">Project</TableHead>
-                      <TableHead className="font-bold text-gray-700 w-[100px]">Status</TableHead>
-                      <TableHead className="font-bold text-gray-700 hidden lg:table-cell w-[120px]">Deadline</TableHead>
-                      <TableHead className="font-bold text-gray-700 hidden sm:table-cell w-[100px]">Priority</TableHead>
+      <TableHead className="font-bold text-gray-700 w-1/2">Title</TableHead>
+      <TableHead className="font-bold text-gray-700 hidden md:table-cell w-1/5">Project Name</TableHead>
+                      <TableHead className="font-bold text-gray-700">Status</TableHead>
+                      <TableHead className="font-bold text-gray-700 hidden lg:table-cell">Deadline</TableHead>
+                      <TableHead className="font-bold text-gray-700 hidden sm:table-cell">Priority</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedTasks.map((task) => (
+                    {paginatedBugs.map((bug) => (
                       <TableRow 
-                        key={task._id} 
+                        key={bug._id} 
                         className="text-xs sm:text-sm cursor-pointer hover:bg-gray-50" 
-                        onClick={() => handleRowClick(task)}
+                        onClick={() => handleViewClick(bug)}
+                        role="button"
+                        tabIndex={0}
                       >
-                        <TableCell className="font-medium text-gray-900 w-1/2 truncate overflow-hidden text-ellipsis whitespace-nowrap" title={task.title}>
-                          {task.title}
+                        <TableCell className="font-medium text-gray-900 max-w-xs truncate">
+                          {bug.title}
                         </TableCell>
-                        <TableCell className="text-gray-600 hidden md:table-cell w-1/5">
-                          {task.projectName}
+                        <TableCell className="text-gray-600 hidden md:table-cell">
+                          {bug.projectName || "NA"}
                         </TableCell>
-                        <TableCell className="w-[100px]">
-                          <Badge className={`${statusColors[task.status]} text-xs capitalize`}>
-                            {task.status}
+                        <TableCell>
+                          <Badge className={`${statusColors[bug.status.toLowerCase()]} text-xs capitalize`}>
+                            {bug.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-600 hidden lg:table-cell w-[120px]">
-                          {formatDateUTC(task.deadline) || 'No Deadline'}
+                        <TableCell className="text-gray-600 hidden lg:table-cell">
+                          {
+                            formatDateTimeIST(bug.deadline)||"No Deadline Given"
+                          }
+                        
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell w-[100px]">
-                          <Badge className={`${priorityColors[task.priority]} text-xs`}>
-                            {task.priority}
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge className={`${priorityColors[bug.priority]} text-xs`}>
+                            {bug.priority}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -463,8 +456,8 @@ const EmployeeTasksList = () => {
               <div className="flex flex-col sm:flex-row items-center justify-between px-2 py-4 gap-4 sm:gap-0">
                 <div className="text-xs sm:text-sm text-gray-700">
                   Page {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                  {Math.min(currentPage * itemsPerPage, filteredAndSortedTasks.length)} of{" "}
-                  {filteredAndSortedTasks.length} Tasks
+                  {Math.min(currentPage * itemsPerPage, sortedBugs.length)} of{" "}
+                  {sortedBugs.length} Issues
                 </div>
                 {totalPages > 1 && (
                   <Pagination>
@@ -535,8 +528,15 @@ const EmployeeTasksList = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Issue Details Modal (View Only) */}
+      <BugDetailsViewModal
+        isOpen={isModalOpen}
+        onOpenChange={handleModalClose}
+        bug={selectedBug}
+        bugId={selectedBug?.bug_id}
+        readOnly={true}
+      />
     </div>
   );
-};
-
-export default EmployeeTasksList;
+}
