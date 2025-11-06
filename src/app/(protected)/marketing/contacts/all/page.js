@@ -1,6 +1,6 @@
 'use client';
 
-import RecievedContacts from "@/modules/marketing/contact/RecievedContacts";
+import AllContacts from "@/modules/marketing/components/AllContacts";
 
 
 
@@ -13,8 +13,8 @@ export default function Contact() {
     <div className="">
     
 
-
-    <RecievedContacts/>
+<AllContacts/>
+   
     </div>
   );
 }

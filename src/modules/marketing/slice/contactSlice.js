@@ -88,27 +88,12 @@ export const updateContactStatus = createAsyncThunk(
     }
   }
 );
-// Thunk: Get Recent Contacts Received (e.g., last 7 days)
-export const getRecentContacts = createAsyncThunk(
-  'contact/getRecentContacts',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.get('/contact/received'); // API endpoint to fetch recent contacts
-      return response.data.data||[]; 
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch recent contacts');
-    }
-  }
-);
-
 
 // Initial State
 const initialState = {
   contacts: [],
   Approvedcontacts: [],
-  recentContacts: [], 
   selectedContact: null,
-
   status: 'idle',
   error: null,
 };
@@ -210,22 +195,7 @@ const contactSlice = createSlice({
       .addCase(updateContactStatus.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
-      })
-      // Recent Contacts
-builder
-  .addCase(getRecentContacts.pending, (state) => {
-    state.status = 'loading';
-    state.error = null;
-  })
-  .addCase(getRecentContacts.fulfilled, (state, action) => {
-    state.status = 'succeeded';
-    state.recentContacts = action.payload;
-  })
-  .addCase(getRecentContacts.rejected, (state, action) => {
-    state.status = 'failed';
-    state.error = action.payload;
-  });
-
+      });
   },
 });
 

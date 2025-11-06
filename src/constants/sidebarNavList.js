@@ -131,8 +131,11 @@ export const fullNav = [
    icon: "Inbox",
    roles: ["cpcGroup"],
    items: [
-    //  { title: "Overview", url: "/marketing", roles: ["cpcGroup", "employeeGroup"] },
-     { title: "Received Contacts", url: "/marketing/contacts", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "Overview", url: "/marketing/contacts/overview", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "Recent Inquiry", url: "/marketing/contacts/recent", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "Follow-Up Action", url: "/marketing/contacts/follow-ups", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "All Inquiry", url: "/marketing/contacts/all", roles: ["cpcGroup", "employeeGroup"] },
+     { title: "Reports", url: "/marketing/reports", roles: ["cpcGroup", "employeeGroup"] },
    ],
  },
   // // 💰 Sales

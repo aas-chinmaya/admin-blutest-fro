@@ -49,9 +49,9 @@ import { format, isWithinInterval, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { toast } from 'sonner';
-import AddContactForm from './AddContactForm';
+import ManualAddContactForm from './ManualAddContactForm';
 
-export default function Contact() {
+export default function AllContacts() {
   const dispatch = useDispatch();
   const router = useRouter();
   const { contacts, status } = useSelector((state) => state.contact);
@@ -170,7 +170,7 @@ export default function Contact() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-3xl font-bold flex items-center">
-              All Contacts
+           All Contacts
             </CardTitle>
             <Button
               className="bg-blue-700 hover:bg-blue-800"
@@ -428,7 +428,7 @@ export default function Contact() {
               Add New Contact
             </DialogTitle>
           </DialogHeader>
-          <AddContactForm onSubmit={handleAddContact} onCancel={() => setIsAddModalOpen(false)} />
+          <ManualAddContactForm onSubmit={handleAddContact} onCancel={() => setIsAddModalOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
