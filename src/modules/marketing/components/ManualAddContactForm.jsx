@@ -67,7 +67,7 @@ const ManualAddContactForm = ({ onSubmit, onCancel }) => {
           <div>
             <Label htmlFor="fullName" className="font-medium flex items-center">
               <User className="h-4 w-4 mr-1 text-blue-600" />
-              Full Name <span className="text-red-500">*</span>
+              Contact Person <span className="text-red-500">*</span>
             </Label>
             <Input
               id="fullName"

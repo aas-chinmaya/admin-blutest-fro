@@ -34,8 +34,8 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import EmployeeDashboard from "@/modules/dashboard/employeeDashboard";
-import { CpcDashboard } from "@/modules/dashboard/cpcDashboard";
+import EmployeeDashboard from "@/modules/dashboard/components/employeeDashboard";
+import { CpcDashboard } from "@/modules/dashboard/components/cpcDashboard";
 
 export default function Dashboard() {
   const { currentUser } = useCurrentUser();

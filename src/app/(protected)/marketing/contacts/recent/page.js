@@ -1,6 +1,6 @@
 'use client';
 
-import InitialContactReceived from "@/modules/marketing/components/InitialContactReceived";
+import RecentContactsList from "@/modules/marketing/components/RecentContactsList";
 
 
 
@@ -14,7 +14,7 @@ export default function Contact() {
     
 
 
-    <InitialContactReceived/>
+    <RecentContactsList/>
     </div>
   );
 }
