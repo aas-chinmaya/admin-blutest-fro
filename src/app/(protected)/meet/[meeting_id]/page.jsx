@@ -4,7 +4,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import MeetingController from "@/modules/meet/MeetingController";
+import MeetingController from "@/modules/meet/components/MeetingController";
 
 export default function MeetingControllerPage() {
   const { meeting_id } = useParams(); // Extract meeting ID from URL

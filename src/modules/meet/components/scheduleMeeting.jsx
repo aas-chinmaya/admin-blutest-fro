@@ -24,11 +24,14 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import {
+  getContactById,
 
+} from '@/modules/marketing/slices/contactSlice';
 export default function ScheduleMeetingModal({ meetingRefs, contactId,onClose }) {
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
-
+const { selectedContact} = useSelector((state) => state.contact);
   const { createStatus, error } = useSelector((state) => state.meet);
 
   // Auto-detect any xxxId from URL
@@ -64,6 +67,10 @@ export default function ScheduleMeetingModal({ meetingRefs, contactId,onClose })
     dispatch(clearError());
     dispatch(resetCreateStatus());
   }, [dispatch]);
+  useEffect(() => {
+dispatch(getContactById(contactId));
+  }, [dispatch]);
+console.log(selectedContact);
 
   // Duration
   useEffect(() => {
@@ -280,38 +287,6 @@ export default function ScheduleMeetingModal({ meetingRefs, contactId,onClose })
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

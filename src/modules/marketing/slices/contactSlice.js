@@ -77,17 +77,32 @@ export const deleteContact = createAsyncThunk(
 // Thunk: Update contact status
 export const updateContactStatus = createAsyncThunk(
   'contact/updateContactStatus',
-  async ({ contactId,status,feedback }, { rejectWithValue }) => {
+  async ({ contactId,status,feedback,internalNote,actionedBy }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.put(`/contact/updatecontact/${contactId}`, {
-        status,feedback
+        status,feedback,internalNote,actionedBy
       });
+      
+      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to update contact status');
     }
   }
 );
+// export const updateContactStatus = createAsyncThunk(
+//   'contact/updateContactStatus',
+//   async ({ contactId,status,feedback }, { rejectWithValue }) => {
+//     try {
+//       const response = await axiosInstance.put(`/contact/updatecontact/${contactId}`, {
+//         status,feedback
+//       });
+//       return response.data;
+//     } catch (error) {
+//       return rejectWithValue(error.response?.data?.message || 'Failed to update contact status');
+//     }
+//   }
+// );
 // Thunk: Get Recent Contacts Received (e.g., last 7 days)
 export const getRecentContacts = createAsyncThunk(
   'contact/getRecentContacts',
