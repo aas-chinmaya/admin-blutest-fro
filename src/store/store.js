@@ -9,6 +9,7 @@ import notificationReducer from "@/modules/communication/slices/notificationSlic
 import profileReducer from "@/modules/user/slices/profileSlice";
 import authReducer from "@/modules/auth/slices/authSlice";
 import userReducer from "@/modules/user/slices/userSlice";
+import employeeReducer from "@/modules/user/slices/employeeSlice";
 
 //2.dashbaord/overview
 import dashboardReducer from "@/modules/dashboard/slices/dashboardSlice";
@@ -84,6 +85,7 @@ export const store = configureStore({
     auth: authReducer,
     notifications: notificationReducer,
     user: userReducer,
+    employee: employeeReducer,  // ✅ Registered here
 
     //3 dashboard
     dashboard: dashboardReducer,

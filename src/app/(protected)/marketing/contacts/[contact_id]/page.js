@@ -8,7 +8,7 @@ export default function Contact() {
 
   return (
     <div className="">
-      <ContactDetails contactId={contact_id} />
+      <ContactDetails contact_id={contact_id} />
     </div>
   );
 }

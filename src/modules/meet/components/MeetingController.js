@@ -32,7 +32,28 @@ import {
 import MeetingDetailsContent from "./MeetingDetailsContent";
 import ProposalContent from "./ProposalContent"; // External component import
 import MomContent from "./MomContent"; // External component import
-
+// Dummy data for demonstration
+const meeting = {
+  meetingId: "meetingid1",
+  agenda: "Project Kickoff Meeting",
+  meetingMode: "Online",
+  start: { dateTime: "2025-11-10T10:00:00Z" },
+  end: { dateTime: "2025-11-10T11:00:00Z" },
+  attendees: ["John Doe", "Jane Smith", "Alex Johnson"],
+  mom: {
+    momId: "mom123",
+    agenda: "Project Kickoff Meeting",
+    meetingMode: "Online",
+    duration: "10:00 AM - 11:00 AM",
+    participants: ["John Doe", "Jane Smith", "Alex Johnson"],
+    summary: "Discussed project goals, timelines, and resource allocation.",
+    notes: "Next meeting scheduled for next week.",
+    createdBy: "John Doe",
+    status: "draft", // Change to "final" to test finalized MOM
+    reasonForDelay: "",
+    pdfUrl: "/dummy-mom.pdf", // Simulated PDF URL
+  },
+};
 export default function MeetingController({ meetingId }) {
   const dispatch = useDispatch();
   const { selectedMeeting, status, error } = useSelector((state) => state.meet);
@@ -275,6 +296,7 @@ export default function MeetingController({ meetingId }) {
               </TabsList>
               <TabsContent value="details" className="min-h-screen">
                 <MeetingDetailsContent
+
                   selectedMeeting={selectedMeeting}
                   formatDate={formatDate}
                   formatDateTime={formatDateTime}
@@ -289,7 +311,8 @@ export default function MeetingController({ meetingId }) {
                 <ProposalContent meetingId={meetingId} />
               </TabsContent>
               <TabsContent value="mom" className="min-h-screen">
-                <MomContent meetingId={meetingId} />
+              
+                <MomContent meeting={selectedMeeting} meetingId={meetingId} />
               </TabsContent>
             </Tabs>
           </CardContent>
