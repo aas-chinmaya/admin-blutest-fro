@@ -311,7 +311,7 @@ export default function AddClient() {
 
   return (
     <>
-      <div ref={formRef} className="min-h-screen p-6 bg-gray-50">
+      <div ref={formRef} className="min-h-screen p-6 ">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 text-center sm:text-left">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Onboard New Client</h1>

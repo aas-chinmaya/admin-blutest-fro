@@ -280,7 +280,7 @@ export default function EditClientForm() {
 
   return (
     <>
-      <div ref={formRef} className="min-h-screen p-6 bg-gray-50">
+      <div ref={formRef} className="min-h-screen p-6 ">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 text-center sm:text-left flex items-center justify-between">
             <button onClick={() => router.back()} className="inline-flex items-center gap-2 bg-blue-700 text-white font-medium text-sm px-6 py-3 rounded-full shadow-md hover:bg-blue-800 transition">
