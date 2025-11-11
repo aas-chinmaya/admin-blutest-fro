@@ -1,30 +1,74 @@
+
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import {axiosInstance} from '@/lib/axios'; 
+import { axiosInstance } from '@/lib/axios';
+
 // Initial State
 const initialState = {
   quotations: [],
+  meetingQuotations: [],
   quotation: null,
+  clientStatus: null,
   loading: false,
   error: null,
+
 };
- 
- 
-export const createQuotation = createAsyncThunk(
-  'quotation/createQuotation',
-  async (quotationData, { rejectWithValue }) => {
+
+// === NEW: Fetch Quotations by Meeting ID ===
+export const fetchQuotationsByMeeting = createAsyncThunk(
+  'quotation/fetchByMeeting',
+  async (meetingId, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post('/quotation/create', quotationData);
+      // Normally you’d call the API:
+      // const res = await axiosInstance.get(`/quotation/getbyMeetingId/${meetingId}`);
+      // return res.data;
+
+      // But for now, we return dummy data:
+      return [
+        {
+          quotationNumber: 'Q-1001',
+          meetingId: 'M-500',
+          clientName: 'Acme Corp.',
+          date: '2025-11-10',
+          totalAmount: 12500,
+          status: 'draft',
+        },
+        {
+          quotationNumber: 'Q-1002',
+          meetingId: 'M-500',
+          clientName: 'Beta Industries',
+          date: '2025-11-09',
+          totalAmount: 9800,
+          status: 'final',
+        },
+      ];
+      // return res.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data || err.message);
+    }
+  }
+);
+
+// === FIXED: Update uses correct endpoint ===
+export const updateQuotation = createAsyncThunk(
+  'quotation/updateQuotation',
+  async (updatedData, { rejectWithValue }) => {
+    try {
+      const { quotationNumber } = updatedData;
+      const res = await axiosInstance.put(`/quotation/update/${quotationNumber}`, updatedData);
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
   }
 );
- export const updateQuotation = createAsyncThunk(
-  'quotation/updateQuotation',
-  async (  updatedData , { rejectWithValue }) => {
+
+// === Existing Thunks (unchanged but cleaned) ===
+export const createQuotation = createAsyncThunk(
+  'quotation/createQuotation',
+  async (quotationData, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post(`/quotation/create`, updatedData);
+      const res = await axiosInstance.post('/quotation/create', quotationData);
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -43,9 +87,9 @@ export const getQuotations = createAsyncThunk(
     }
   }
 );
- 
+
 export const getQuotationById = createAsyncThunk(
-  'quotations/getQuotationById',
+  'quotation/getQuotationById',
   async (quotationNumber, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.get(`/quotation/qoutationbynumber/${quotationNumber}`);
@@ -55,10 +99,7 @@ export const getQuotationById = createAsyncThunk(
     }
   }
 );
- 
 
-
- 
 export const updateQuotationStatus = createAsyncThunk(
   'quotation/updateQuotationStatus',
   async ({ quotationNumber, statusData }, { rejectWithValue }) => {
@@ -70,7 +111,7 @@ export const updateQuotationStatus = createAsyncThunk(
     }
   }
 );
- 
+
 export const deleteQuotation = createAsyncThunk(
   'quotation/deleteQuotation',
   async (quotationNumber, { rejectWithValue }) => {
@@ -83,55 +124,70 @@ export const deleteQuotation = createAsyncThunk(
   }
 );
 
-// pdf view thunks
 export const getPdfById = createAsyncThunk(
-  'quotations/getPdfById',
+  'quotation/getPdfById',
   async (quotationNumber, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get(`/quotation/pdfbyqoutationnumber/${quotationNumber}`);
+      const res = await axiosInstance.get(`/quotation/pdfbyqoutationnumber/${quotationNumber}`, {
+        responseType: 'blob',
+      });
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
   }
 );
- 
- 
-//ststus chek of client onbaording
-
 
 export const getClientStatusByQuotationId = createAsyncThunk(
   'quotation/getClientStatusByQuotationId',
   async (quotationId, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.get(`/quotation/client-status-by-quotation/${quotationId}`);
-      return res.data; // Expected: status, contact info, etc.
+      return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
     }
   }
 );
 
-
-
-// Slice
+// === Slice ===
 const quotationSlice = createSlice({
   name: 'quotation',
-  initialState:{
-    quotations: [],
-    quotation: null,
-    loading: false,
-    error: null,
-  },
+  initialState,
   reducers: {
     clearQuotationState: (state) => {
       state.quotation = null;
       state.error = null;
     },
+    // === NEW: Clear quotations list (used in ProposalContent cleanup) ===
+    clearQuotations: (state) => {
+      state.quotations = [];
+      state.quotation = null;
+      state.clientStatus = null;
+    },
+     clearMeetingQuotations: (state) => {   // <-- NEW
+    state.meetingQuotations = [];
+  },
   },
   extraReducers: (builder) => {
     builder
-      // Create
+      // === FETCH BY MEETING ===
+     // === FETCH BY MEETING ===
+.addCase(fetchQuotationsByMeeting.pending, (state) => {
+  state.loading = true;
+  state.error = null;
+})
+.addCase(fetchQuotationsByMeeting.fulfilled, (state, action) => {
+  state.loading = false;
+  state.meetingQuotations = action.payload; // store separately
+})
+.addCase(fetchQuotationsByMeeting.rejected, (state, action) => {
+  state.loading = false;
+  state.error = action.payload;
+})
+
+
+      // === CREATE ===
       .addCase(createQuotation.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -139,13 +195,14 @@ const quotationSlice = createSlice({
       .addCase(createQuotation.fulfilled, (state, action) => {
         state.loading = false;
         state.quotations.unshift(action.payload);
+        state.quotation = action.payload;
       })
       .addCase(createQuotation.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
- 
-      // Get All
+
+      // === GET ALL ===
       .addCase(getQuotations.pending, (state) => {
         state.loading = true;
       })
@@ -157,8 +214,8 @@ const quotationSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
- 
-      // Get by ID
+
+      // === GET BY ID ===
       .addCase(getQuotationById.pending, (state) => {
         state.loading = true;
         state.quotation = null;
@@ -171,24 +228,25 @@ const quotationSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
- 
-      // Update
+
+      // === UPDATE ===
       .addCase(updateQuotation.pending, (state) => {
         state.loading = true;
       })
       .addCase(updateQuotation.fulfilled, (state, action) => {
         state.loading = false;
-        state.quotation = action.payload;
-        // state.quotations = state.quotations.map((q) =>
-        //   q.quotationNumber === action.payload.quotationNumber ? action.payload : q
-        // );
+        const updated = action.payload;
+        state.quotation = updated;
+        state.quotations = state.quotations.map((q) =>
+          q.quotationNumber === updated.quotationNumber ? updated : q
+        );
       })
       .addCase(updateQuotation.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
- 
-      // Update Status
+
+      // === UPDATE STATUS ===
       .addCase(updateQuotationStatus.pending, (state) => {
         state.loading = true;
       })
@@ -204,8 +262,8 @@ const quotationSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
- 
-      // Delete
+
+      // === DELETE ===
       .addCase(deleteQuotation.pending, (state) => {
         state.loading = true;
       })
@@ -214,44 +272,44 @@ const quotationSlice = createSlice({
         state.quotations = state.quotations.filter(
           (q) => q.quotationNumber !== action.payload
         );
+        if (state.quotation?.quotationNumber === action.payload) {
+          state.quotation = null;
+        }
       })
       .addCase(deleteQuotation.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
 
-       // Get PDF by ID
+      // === GET PDF ===
       .addCase(getPdfById.pending, (state) => {
         state.loading = true;
-        state.quotation = null;
       })
       .addCase(getPdfById.fulfilled, (state, action) => {
         state.loading = false;
-        state.quotation = action.payload;
+        // PDF blob stored if needed
       })
       .addCase(getPdfById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-      
-      // Get Client Status by Quotation ID
-.addCase(getClientStatusByQuotationId.pending, (state) => {
-  state.loading = true;
-  state.clientStatus = null;
-})
-.addCase(getClientStatusByQuotationId.fulfilled, (state, action) => {
-  state.loading = false;
-  state.clientStatus = action.payload;
-})
-.addCase(getClientStatusByQuotationId.rejected, (state, action) => {
-  state.loading = false;
-  state.error = action.payload;
-})
 
-      ;
+      // === CLIENT STATUS ===
+      .addCase(getClientStatusByQuotationId.pending, (state) => {
+        state.loading = true;
+        state.clientStatus = null;
+      })
+      .addCase(getClientStatusByQuotationId.fulfilled, (state, action) => {
+        state.loading = false;
+        state.clientStatus = action.payload;
+      })
+      .addCase(getClientStatusByQuotationId.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
   },
 });
- 
+
 // Export Actions & Reducer
-export const { clearQuotationState } = quotationSlice.actions;
+export const { clearQuotationState, clearMeetingQuotations,clearQuotations } = quotationSlice.actions;
 export default quotationSlice.reducer;

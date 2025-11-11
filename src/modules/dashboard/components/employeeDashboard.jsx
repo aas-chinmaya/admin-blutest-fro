@@ -1520,10 +1520,7 @@ export default function EmployeeDashboard() {
       {/* Tasks Section */}
       <div className="p-5 text-gray-700">
         <h2 className="text-lg font-semibold mb-2">Due or Overdue Tasks</h2>
-        {
-          console.log("todayOverdueTasks",todayOverdueTasks)
-          
-        }
+       
         <div className="bg-white rounded-xl shadow-lg p-6 h-[400px] overflow-y-auto">
           {todayOverdueStatus === "failed" ? (
             <div className="text-center py-12">

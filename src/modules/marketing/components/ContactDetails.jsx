@@ -224,7 +224,7 @@ export default function ContactDetails({ contact_id }) {
     return () => dispatch(clearSelectedContact());
   }, [contactId, dispatch]);
 
-  const FREE_TIER_LIMIT = 5;
+  const FREE_TIER_LIMIT = 3;
   const totalMeetings = meetings?.length || 0;
   const progressValue = Math.min((totalMeetings / FREE_TIER_LIMIT) * 100, 100);
   const isFreeTierFull = totalMeetings >= FREE_TIER_LIMIT;

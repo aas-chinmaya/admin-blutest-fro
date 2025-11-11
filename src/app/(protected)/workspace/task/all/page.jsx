@@ -1,7 +1,7 @@
 'use client';
 
 
-import AllTask from '@/modules/all/tasks/AllTask';
+import AllTask from '@/modules/project-management/task/components/AllTask';
 
 
 

@@ -32,7 +32,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { FiX, FiFilter, FiChevronDown, FiSearch as FiSearchIcon, FiChevronLeft, FiChevronRight, FiAlertCircle, FiArrowUp } from 'react-icons/fi';
+import { FiX,FiArrowDown, FiFilter, FiChevronDown, FiSearch as FiSearchIcon, FiChevronLeft, FiChevronRight, FiAlertCircle, FiArrowUp } from 'react-icons/fi';
 
 const statusConfig = {
   Active: { badge: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: <FiAlertCircle className="w-4 h-4 text-emerald-600" /> },

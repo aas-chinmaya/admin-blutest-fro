@@ -139,7 +139,7 @@ export default function ViewProjectById({ projectId }) {
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, isLargeScreen]);
+  }, [activeTab, isLargeScreen,tabs]);
 
   const updateTabVisibility = () => {}; // Defined inside useEffect above
 

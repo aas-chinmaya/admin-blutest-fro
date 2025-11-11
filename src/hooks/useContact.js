@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { getContactById } from '"@/modules/contact/slices/contactSlice'
+import { getContactById } from  '@/modules/marketing/slices/contactSlice';
 
 export const useContactDetails = (contactId) => {
   const dispatch = useDispatch()

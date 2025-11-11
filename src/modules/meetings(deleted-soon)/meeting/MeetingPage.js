@@ -9,7 +9,7 @@ import {
   updateMeeting,
   deleteMeeting,
   clearError,
-} from "@/features/meetingSlice";
+} from "@/modules/meetingSlice";
 import { fetchAllSlots } from "@/features/master/slotMasterSlice";
 import { Button } from "@/components/ui/button";
 import {

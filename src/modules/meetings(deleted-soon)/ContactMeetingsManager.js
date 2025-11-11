@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
-import { getAllApprovedContacts } from "@/features/marketing/contactSlice";
+import { getAllApprovedContacts } from "@/modules/marketing/slices/contactSlice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {

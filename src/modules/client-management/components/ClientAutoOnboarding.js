@@ -34,8 +34,8 @@ import {
   removeFile,
   resetForm,
 } from "@/modules/client-management/slices/clientSlice";
-import { fetchIndustries } from "@/features/master/industriesMasterSlice";
-import { getContactById } from "@/features/contactSlice";
+import { fetchIndustries } from "@/modules/master/slices/industriesMasterSlice";
+import { getContactById } from "@/modules/marketing/slices/contactSlice";
 
 export default function AutoOnboardingClient({ contactId }) {
   const dispatch = useDispatch();

@@ -125,7 +125,7 @@ export const fullNav = [
    items: withBase(MARKETING_BASE,[
      { title: "Overview", path: "contacts/overview", roles: ["cpcGroup", "employeeGroup"] },
      { title: "Recent Inquiry", path: "contacts/recent", roles: ["cpcGroup", "employeeGroup"] },
-     { title: "Follow-Up Action", path: "contacts/follow-ups", roles: ["cpcGroup", "employeeGroup"] },
+    //  { title: "Follow-Up Action", path: "contacts/follow-ups", roles: ["cpcGroup", "employeeGroup"] },
      { title: "All Inquiry", path: "contacts/all", roles: ["cpcGroup", "employeeGroup"] },
     //  { title: "Reports", path: "/contacts/reports", roles: ["cpcGroup", "employeeGroup"] },
    ]),

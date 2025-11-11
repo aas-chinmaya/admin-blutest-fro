@@ -47,16 +47,17 @@ export default function Dashboard() {
 
   if (role === "cpc") return <CpcDashboard />;
 
-  if (role === "employee" || "admin") return <EmployeeDashboard employeeId={employeeId} />;
+  else return <EmployeeDashboard employeeId={employeeId} />;
+  // if (role === "employee" || "admin") return <EmployeeDashboard employeeId={employeeId} />;
 
-  return (
-    <div className="flex items-center justify-center h-[80vh]">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-red-600">Unauthorized Access</h1>
-        <p className="text-gray-500 mt-2">
-          You do not have permission to view this page.
-        </p>
-      </div>
-    </div>
-  );
+  // return (
+  //   <div className="flex items-center justify-center h-[80vh]">
+  //     <div className="text-center">
+  //       <h1 className="text-2xl font-semibold text-red-600">Unauthorized Access</h1>
+  //       <p className="text-gray-500 mt-2">
+  //         You do not have permission to view this page.
+  //       </p>
+  //     </div>
+  //   </div>
+  // );
 }
